@@ -1,0 +1,342 @@
+"""Stack-based evaluator for Hya.
+
+Evaluation model (Forth-like + Lisp):
+1. Expressions are evaluated left-to-right, top-down
+2. The evaluator maintains a data stack (list)
+3. Literals push themselves onto the stack
+4. Builtins pop arguments (according to their arity), compute, push results
+5. User-defined functions (Function) create a new lexical scope, bind args,
+   then evaluate their body
+6. Special forms (if, define, defn, fn, quote, do, let, set!) have custom
+   evaluation rules
+"""
+
+from __future__ import annotations
+from typing import Any, Optional
+
+from .types import Symbol, nil, Builtin, Function, is_truthy, hya_repr
+from .env import Environment
+from .parse import ArityTable, Parser, parse_source
+from .builtins import get_builtins
+
+
+# ---------------------------------------------------------------------------
+# Evaluator
+# ---------------------------------------------------------------------------
+
+class Evaluator:
+    """Stack-based Hya evaluator.
+
+    The evaluator walks an AST (nested Python lists produced by the parser)
+    and evaluates it left-to-right.
+
+    Attributes:
+        stack: The data stack (Forth-like).
+        env: The current environment.
+        global_env: The root environment.
+        arity_table: Table of known arities (for the parser).
+        debug: If True, print trace info.
+    """
+
+    def __init__(self, debug: bool = False) -> None:
+        self.stack: list[Any] = []
+        self.global_env = Environment(name="global")
+        self.env = self.global_env
+        self.arity_table = ArityTable()
+        self.debug = debug
+        self._parser: Optional[Parser] = None
+
+        # Load builtins
+        self._load_builtins()
+
+    @property
+    def parser(self) -> Parser:
+        if self._parser is None:
+            self._parser = Parser(self.arity_table)
+        return self._parser
+
+    def _load_builtins(self) -> None:
+        """Register all builtins in the environment and arity table."""
+        for name, builtin in get_builtins().items():
+            self.global_env.define(name, builtin)
+            if builtin.arity >= 0:
+                self.arity_table.register(name, builtin.arity)
+            # arity -1 (variadic) means the symbol is registered but with
+            # 'variadic' marker — user must use parens
+        # Special form arities
+        self.arity_table.register("define", 2)
+        self.arity_table.register("quote", 1)
+        self.arity_table.register("do", -1)
+        self.arity_table.register("set!", 2)
+        self.arity_table.register("let", -1)
+        self.arity_table.register("if", 3)
+        self.arity_table.register("while", -1)
+
+    def eval(self, expr: Any) -> Any:
+        """Evaluate a single expression and return the result.
+
+        The result is also pushed onto the data stack.
+        """
+        result = self._eval_expr(expr)
+        # Push result onto the data stack
+        if result is not None:
+            self.stack.append(result)
+        return result
+
+    def _eval_expr(self, expr: Any) -> Any:
+        """Internal recursive evaluation of a single expression."""
+        if self.debug:
+            print(f"  EVAL: {hya_repr(expr)}  stack=[{','.join(hya_repr(e) for e in self.stack[-3:])}]")
+
+        # Literals evaluate to themselves
+        if isinstance(expr, (int, float, str)):
+            return expr
+
+        if expr is nil:
+            return nil
+
+        if expr is True:
+            return True
+
+        if expr is False:
+            return False
+
+        # Symbol: look up in environment (handle special constants)
+        if isinstance(expr, Symbol):
+            name = expr.name
+            # Built-in constants
+            if name == "nil":
+                return nil
+            if name == "true":
+                return True
+            if name == "false":
+                return False
+            val = self.env.get(name)
+            if val is None:
+                raise NameError(f"Undefined symbol: {name}")
+            return val
+
+        # List: S-expression application
+        if isinstance(expr, list):
+            if not expr:
+                return nil
+
+            head = expr[0]
+
+            # ---- Special forms ----
+
+            # QUOTE: return the argument unevaluated
+            if isinstance(head, Symbol) and head.name == "quote":
+                if len(expr) < 2:
+                    raise SyntaxError("quote expects 1 argument")
+                return expr[1]
+
+            # DEFINE: bind a name to a value
+            if isinstance(head, Symbol) and head.name == "define":
+                if len(expr) < 3:
+                    raise SyntaxError("define expects (define name value)")
+                name_expr = expr[1]
+                value_expr = expr[2]
+                if isinstance(name_expr, Symbol):
+                    name = name_expr.name
+                    value = self._eval_expr(value_expr)
+                    self.env.define(name, value)
+                    # Register arity for function values
+                    if isinstance(value, Function):
+                        self.arity_table.register(name, value.arity)
+                    return value
+                raise SyntaxError(
+                    f"define expects a symbol name, got {name_expr}")
+
+            # DEFN: define a function with known arity
+            if isinstance(head, Symbol) and head.name == "defn":
+                if len(expr) < 4:
+                    raise SyntaxError(
+                        "defn expects (defn name (params) body...)")
+                name_sym = expr[1]
+                params = expr[2]
+                body = expr[3:]
+                if not isinstance(name_sym, Symbol):
+                    raise SyntaxError(
+                        f"defn expects a symbol name, got {name_sym}")
+                if not isinstance(params, list):
+                    raise SyntaxError(
+                        "defn expects a parameter list")
+                # Create function
+                fn = Function(params, body, self.env, name_sym.name)
+                self.env.define(name_sym.name, fn)
+                # Arity was registered by parser; ensure it matches
+                self.arity_table.register(name_sym.name, len(params))
+                return fn
+
+            # IF: conditional with arity 3
+            if isinstance(head, Symbol) and head.name == "if":
+                if len(expr) < 4:
+                    raise SyntaxError("if expects (if cond then else)")
+                cond = self._eval_expr(expr[1])
+                if is_truthy(cond):
+                    return self._eval_expr(expr[2])
+                else:
+                    return self._eval_expr(expr[3])
+
+            # DO: evaluate multiple exprs, return last
+            if isinstance(head, Symbol) and head.name == "do":
+                result = nil
+                for subexpr in expr[1:]:
+                    result = self._eval_expr(subexpr)
+                return result
+
+            # FN: create anonymous function
+            if isinstance(head, Symbol) and head.name == "fn":
+                if len(expr) < 3:
+                    raise SyntaxError("fn expects (fn (params) body...)")
+                params = expr[1]
+                body = expr[2:]
+                if not isinstance(params, list):
+                    raise SyntaxError(
+                        "fn expects a parameter list")
+                return Function(params, body, self.env)
+
+            # WHILE: loop while condition is truthy
+            if isinstance(head, Symbol) and head.name == "while":
+                if len(expr) < 3:
+                    raise SyntaxError(
+                        "while expects (while cond body...)")
+                cond_expr = expr[1]
+                body_exprs = expr[2:]
+                result = nil
+                while is_truthy(self._eval_expr(cond_expr)):
+                    for subexpr in body_exprs:
+                        result = self._eval_expr(subexpr)
+                return result
+
+            # SET!: mutate a binding
+            if isinstance(head, Symbol) and head.name == "set!":
+                if len(expr) < 3:
+                    raise SyntaxError("set! expects (set! name value)")
+                name_expr = expr[1]
+                value = self._eval_expr(expr[2])
+                if isinstance(name_expr, Symbol):
+                    self.env.set(name_expr.name, value)
+                    return value
+                raise SyntaxError(
+                    f"set! expects a symbol name, got {name_expr}")
+
+            # LET: local bindings
+            if isinstance(head, Symbol) and head.name == "let":
+                if len(expr) < 3:
+                    raise SyntaxError(
+                        "let expects (let ((name val)...) body...)")
+                bindings = expr[1]
+                body = expr[2:]
+                # Create a new scope
+                let_env = self.env.extend("let")
+                old_env = self.env
+                self.env = let_env
+                try:
+                    if isinstance(bindings, list):
+                        for binding in bindings:
+                            if (isinstance(binding, list)
+                                    and len(binding) >= 2):
+                                bname = binding[0]
+                                bval = self._eval_expr(binding[1])
+                                if isinstance(bname, Symbol):
+                                    self.env.define(bname.name, bval)
+                    result = nil
+                    for subexpr in body:
+                        result = self._eval_expr(subexpr)
+                    return result
+                finally:
+                    self.env = old_env
+
+            # ---- Generic function application ----
+            if isinstance(head, Symbol) and head.name == "defn-rec":
+                # Same as defn but the function body can recurse
+                if len(expr) < 4:
+                    raise SyntaxError(
+                        "defn-rec expects (defn-rec name (params) body...)")
+                name_sym = expr[1]
+                params = expr[2]
+                body = expr[3:]
+                fn = Function(params, body, self.env, name_sym.name)
+                # Define BEFORE evaluating body (for recursion)
+                self.env.define(name_sym.name, fn)
+                self.arity_table.register(name_sym.name, len(params))
+                return fn
+
+            # Generic function call
+            fn_val = self._eval_expr(head)
+            args = [self._eval_expr(arg) for arg in expr[1:]]
+
+            if isinstance(fn_val, Builtin):
+                return fn_val(*args, evaluator=self)
+
+            if isinstance(fn_val, Function):
+                return self._apply_function(fn_val, args)
+
+            raise TypeError(
+                f"Cannot call non-function: {hya_repr(fn_val)}")
+
+        raise TypeError(f"Unknown expression type: {type(expr)}: {expr}")
+
+    def _apply_function(self, fn: Function, args: list) -> Any:
+        """Apply a user-defined function with given arguments.
+
+        Creates a new lexical scope, binds parameters to args,
+        evaluates the body, and returns the result.
+        """
+        if len(args) != len(fn.params):
+            raise TypeError(
+                f"Function expected {len(fn.params)} args, "
+                f"got {len(args)}")
+
+        # Create call environment
+        call_env = fn.env.extend(f"call({fn.name or 'anon'})")
+        old_env = self.env
+        self.env = call_env
+
+        try:
+            # Bind parameters
+            for param, arg in zip(fn.params, args):
+                self.env.define(param.name, arg)
+
+            # Evaluate body
+            if isinstance(fn.body, list):
+                result = nil
+                for subexpr in fn.body:
+                    result = self._eval_expr(subexpr)
+                return result
+            else:
+                return self._eval_expr(fn.body)
+        finally:
+            self.env = old_env
+
+    def exec(self, source: str) -> Any:
+        """Parse and evaluate Hya source code.
+
+        Expressions are parsed and evaluated ONE AT A TIME so that
+        arity registrations from `defn`/`define` take effect for
+        subsequent expressions in the same source text.
+
+        Args:
+            source: Hya source string.
+
+        Returns:
+            Result of the last expression.
+        """
+        from .tokenize import tokenize
+        from .parse import TokenStream
+        tokens = tokenize(source)
+        stream = TokenStream(tokens)
+        result = nil
+        while not stream.is_eof:
+            expr = self.parser._parse_expr(stream, allow_arity=True)
+            if expr is not None:
+                result = self.eval(expr)
+        return result
+
+    def exec_file(self, path: str) -> Any:
+        """Load and execute a .hya file."""
+        with open(path, 'r', encoding='utf-8') as f:
+            source = f.read()
+        return self.exec(source)

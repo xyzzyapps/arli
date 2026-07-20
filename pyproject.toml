@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "hya"
+version = "0.1.0"
+description = "A Forth-like Lisp with arity-driven parenthesis elimination"
+readme = "README.md"
+license = {text = "MIT"}
+authors = []
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+hya = "hya.main:main"

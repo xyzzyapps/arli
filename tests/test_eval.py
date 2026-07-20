@@ -1,4 +1,4 @@
-"""Python-specific evaluator tests — features not testable via common .hya tests.
+﻿"""Python-specific evaluator tests â€” features not testable via common .arli tests.
 
 These test Python backend internals and interop that the Go backend can't run.
 """
@@ -8,7 +8,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from src.arli.eval import Evaluator
-from src.arli.types import Symbol, nil, Function, is_truthy, hya_repr
+from src.arli.types import Symbol, nil, Function, is_truthy, arli_repr
 
 
 def test_truthy_falsy():
@@ -77,28 +77,28 @@ def test_python_eval_env():
     print("  OK test_python_eval_env")
 
 
-def test_hya_repr_nil():
+def test_arli_repr_nil():
     """Test representation of nil."""
-    assert hya_repr(nil) == "nil"
-    print("  OK test_hya_repr_nil")
+    assert arli_repr(nil) == "nil"
+    print("  OK test_arli_repr_nil")
 
 
-def test_hya_repr_list():
+def test_arli_repr_list():
     """Test representation of lists."""
-    assert hya_repr([1, 2, 3]) == "(1 2 3)"
-    print("  OK test_hya_repr_list")
+    assert arli_repr([1, 2, 3]) == "(1 2 3)"
+    print("  OK test_arli_repr_list")
 
 
-def test_hya_repr_string():
+def test_arli_repr_string():
     """Test representation of strings."""
-    assert hya_repr("hello") == '"hello"'
-    print("  OK test_hya_repr_string")
+    assert arli_repr("hello") == '"hello"'
+    print("  OK test_arli_repr_string")
 
 
-def test_hya_repr_symbol():
+def test_arli_repr_symbol():
     """Test representation of symbols."""
-    assert hya_repr(Symbol("foo")) == "foo"
-    print("  OK test_hya_repr_symbol")
+    assert arli_repr(Symbol("foo")) == "foo"
+    print("  OK test_arli_repr_symbol")
 
 
 def test_env_scope():
@@ -130,10 +130,10 @@ if __name__ == "__main__":
         test_python_dot_chain,
         test_python_eval,
         test_python_eval_env,
-        test_hya_repr_nil,
-        test_hya_repr_list,
-        test_hya_repr_string,
-        test_hya_repr_symbol,
+        test_arli_repr_nil,
+        test_arli_repr_list,
+        test_arli_repr_string,
+        test_arli_repr_symbol,
         test_env_scope,
         test_set_mutation,
     ]

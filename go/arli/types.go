@@ -1,4 +1,4 @@
-package main
+﻿package main
 
 import (
 	"fmt"
@@ -9,24 +9,24 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// HyaValue interface — every value in Hya implements this
+// ArliValue interface â€” every value in Arli implements this
 // ---------------------------------------------------------------------------
 
-type HyaValue interface {
-	HyaRepr() string
+type ArliValue interface {
+	ArliRepr() string
 }
 
 // ---------------------------------------------------------------------------
 // Primitive types
 // ---------------------------------------------------------------------------
 
-type HyaInt int64
+type ArliInt int64
 
-func (v HyaInt) HyaRepr() string { return strconv.FormatInt(int64(v), 10) }
+func (v ArliInt) ArliRepr() string { return strconv.FormatInt(int64(v), 10) }
 
-type HyaFloat float64
+type ArliFloat float64
 
-func (v HyaFloat) HyaRepr() string {
+func (v ArliFloat) ArliRepr() string {
 	s := strconv.FormatFloat(float64(v), 'g', -1, 64)
 	if !strings.Contains(s, ".") {
 		s += ".0"
@@ -34,29 +34,29 @@ func (v HyaFloat) HyaRepr() string {
 	return s
 }
 
-type HyaString string
+type ArliString string
 
-func (v HyaString) HyaRepr() string { return fmt.Sprintf("%q", string(v)) }
+func (v ArliString) ArliRepr() string { return fmt.Sprintf("%q", string(v)) }
 
-type HyaSymbol string
+type ArliSymbol string
 
-func (v HyaSymbol) HyaRepr() string { return string(v) }
+func (v ArliSymbol) ArliRepr() string { return string(v) }
 
 // ---------------------------------------------------------------------------
-// Nil — singleton false value
+// Nil â€” singleton false value
 // ---------------------------------------------------------------------------
 
-type HyaNil struct{}
+type ArliNil struct{}
 
-func (HyaNil) HyaRepr() string { return "nil" }
+func (ArliNil) ArliRepr() string { return "nil" }
 
-var Nil = HyaNil{}
+var Nil = ArliNil{}
 
-// Helper: convert []HyaValue from a parameter list into HyaList of symbols
-func symbolsFromList(list HyaList) HyaList {
-	syms := make(HyaList, len(list))
+// Helper: convert []ArliValue from a parameter list into ArliList of symbols
+func symbolsFromList(list ArliList) ArliList {
+	syms := make(ArliList, len(list))
 	for i, p := range list {
-		if sym, ok := p.(HyaSymbol); ok {
+		if sym, ok := p.(ArliSymbol); ok {
 			syms[i] = sym
 		} else {
 			panic("params must be symbols")
@@ -65,22 +65,22 @@ func symbolsFromList(list HyaList) HyaList {
 	return syms
 }
 
-func IsTruthy(v HyaValue) bool {
-	_, isnil := v.(HyaNil)
-	_, isfalse := v.(HyaBool)
-	return !isnil && !(isfalse && v.(HyaBool) == False)
+func IsTruthy(v ArliValue) bool {
+	_, isnil := v.(ArliNil)
+	_, isfalse := v.(ArliBool)
+	return !isnil && !(isfalse && v.(ArliBool) == False)
 }
 
 // ---------------------------------------------------------------------------
 // Bool
 // ---------------------------------------------------------------------------
 
-type HyaBool bool
+type ArliBool bool
 
-const True = HyaBool(true)
-const False = HyaBool(false)
+const True = ArliBool(true)
+const False = ArliBool(false)
 
-func (v HyaBool) HyaRepr() string {
+func (v ArliBool) ArliRepr() string {
 	if v {
 		return "true"
 	}
@@ -91,48 +91,48 @@ func (v HyaBool) HyaRepr() string {
 // List
 // ---------------------------------------------------------------------------
 
-type HyaList []HyaValue
+type ArliList []ArliValue
 
-func (l HyaList) HyaRepr() string {
+func (l ArliList) ArliRepr() string {
 	if len(l) == 0 {
 		return "()"
 	}
 	parts := make([]string, len(l))
 	for i, v := range l {
-		parts[i] = v.HyaRepr()
+		parts[i] = v.ArliRepr()
 	}
 	return "(" + strings.Join(parts, " ") + ")"
 }
 
 // ---------------------------------------------------------------------------
-// Builtin — Go function wrapped with arity
+// Builtin â€” Go function wrapped with arity
 // ---------------------------------------------------------------------------
 
-type HyaBuiltin struct {
+type ArliBuiltin struct {
 	Name  string
-	Fn    func(args []HyaValue, ev *Evaluator) (HyaValue, error)
+	Fn    func(args []ArliValue, ev *Evaluator) (ArliValue, error)
 	Arity int // -1 = variadic
 }
 
-func (b *HyaBuiltin) HyaRepr() string { return fmt.Sprintf("<builtin %s arity=%d>", b.Name, b.Arity) }
+func (b *ArliBuiltin) ArliRepr() string { return fmt.Sprintf("<builtin %s arity=%d>", b.Name, b.Arity) }
 
-func (b *HyaBuiltin) Call(args []HyaValue, ev *Evaluator) (HyaValue, error) {
+func (b *ArliBuiltin) Call(args []ArliValue, ev *Evaluator) (ArliValue, error) {
 	return b.Fn(args, ev)
 }
 
 // ---------------------------------------------------------------------------
-// Function — user-defined closure
+// Function â€” user-defined closure
 // ---------------------------------------------------------------------------
 
-type HyaFn struct {
+type ArliFn struct {
 	Name     string
-	Params   []HyaSymbol
-	Body     []HyaValue
+	Params   []ArliSymbol
+	Body     []ArliValue
 	Env      *Environment
 	IsFexpr  bool // f-expressions don't evaluate arguments
 }
 
-func (f *HyaFn) HyaRepr() string {
+func (f *ArliFn) ArliRepr() string {
 	kind := "fn"
 	if f.IsFexpr {
 		kind = "fexpr"
@@ -145,14 +145,14 @@ func (f *HyaFn) HyaRepr() string {
 }
 
 // ---------------------------------------------------------------------------
-// GoValue — wraps a Go value for interop
+// GoValue â€” wraps a Go value for interop
 // ---------------------------------------------------------------------------
 
 type GoValue struct {
 	Value reflect.Value
 }
 
-func (g *GoValue) HyaRepr() string {
+func (g *GoValue) ArliRepr() string {
 	v := g.Value
 	// Display maps in Python-style dict format
 	if v.Kind() == reflect.Map {
@@ -171,7 +171,7 @@ func (g *GoValue) HyaRepr() string {
 			default:
 				keyStr = fmt.Sprintf("%v", kv)
 			}
-			valStr := reflectToHya(v.MapIndex(k)).HyaRepr()
+			valStr := reflectToArli(v.MapIndex(k)).ArliRepr()
 			parts = append(parts, fmt.Sprintf("%s: %s", keyStr, valStr))
 		}
 		return "{" + strings.Join(parts, ", ") + "}"
@@ -179,7 +179,7 @@ func (g *GoValue) HyaRepr() string {
 	return fmt.Sprintf("<Go %s>", v.Type().String())
 }
 
-func (g *GoValue) GetField(name string) (HyaValue, error) {
+func (g *GoValue) GetField(name string) (ArliValue, error) {
 	v := g.Value
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
@@ -189,7 +189,7 @@ func (g *GoValue) GetField(name string) (HyaValue, error) {
 		if !f.IsValid() {
 			return nil, fmt.Errorf("no field '%s' on %s", name, v.Type())
 		}
-		return reflectToHya(f), nil
+		return reflectToArli(f), nil
 	}
 	// Method
 	m := g.Value.MethodByName(name)
@@ -199,7 +199,7 @@ func (g *GoValue) GetField(name string) (HyaValue, error) {
 	return &GoValue{Value: m}, nil
 }
 
-func (g *GoValue) Call(args []HyaValue) (HyaValue, error) {
+func (g *GoValue) Call(args []ArliValue) (ArliValue, error) {
 	v := g.Value
 	if v.Kind() != reflect.Func {
 		return nil, fmt.Errorf("cannot call non-function Go value: %s", v.Type())
@@ -213,13 +213,13 @@ func (g *GoValue) Call(args []HyaValue) (HyaValue, error) {
 		goArgs := make([]reflect.Value, 0, numFixed+1)
 
 		for i := 0; i < numFixed && i < len(args); i++ {
-			goArgs = append(goArgs, hyaToReflect(args[i], t.In(i)))
+			goArgs = append(goArgs, arliToReflect(args[i], t.In(i)))
 		}
 
 		// Pack remaining args into variadic slice
 		varSlice := reflect.MakeSlice(t.In(numFixed), 0, len(args)-numFixed)
 		for i := numFixed; i < len(args); i++ {
-			varSlice = reflect.Append(varSlice, hyaToReflect(args[i], t.In(numFixed).Elem()))
+			varSlice = reflect.Append(varSlice, arliToReflect(args[i], t.In(numFixed).Elem()))
 		}
 		goArgs = append(goArgs, varSlice)
 
@@ -227,36 +227,36 @@ func (g *GoValue) Call(args []HyaValue) (HyaValue, error) {
 		if len(results) == 0 {
 			return Nil, nil
 		}
-		return reflectToHya(results[0]), nil
+		return reflectToArli(results[0]), nil
 	}
 
 	// Non-variadic
 	goArgs := make([]reflect.Value, len(args))
 	for i, a := range args {
-		goArgs[i] = hyaToReflect(a, t.In(i))
+		goArgs[i] = arliToReflect(a, t.In(i))
 	}
 	results := v.Call(goArgs)
 	if len(results) == 0 {
 		return Nil, nil
 	}
-	return reflectToHya(results[0]), nil
+	return reflectToArli(results[0]), nil
 }
 
 // ---------------------------------------------------------------------------
 // Conversion helpers
 // ---------------------------------------------------------------------------
 
-func hyaToReflect(v HyaValue, t reflect.Type) reflect.Value {
+func arliToReflect(v ArliValue, t reflect.Type) reflect.Value {
 	switch val := v.(type) {
-	case HyaInt:
+	case ArliInt:
 		return reflect.ValueOf(int64(val)).Convert(t)
-	case HyaFloat:
+	case ArliFloat:
 		return reflect.ValueOf(float64(val)).Convert(t)
-	case HyaString:
+	case ArliString:
 		return reflect.ValueOf(string(val)).Convert(t)
-	case HyaBool:
+	case ArliBool:
 		return reflect.ValueOf(bool(val)).Convert(t)
-	case HyaNil:
+	case ArliNil:
 		return reflect.Zero(t)
 	case *GoValue:
 		return val.Value
@@ -265,23 +265,23 @@ func hyaToReflect(v HyaValue, t reflect.Type) reflect.Value {
 	}
 }
 
-func reflectToHya(v reflect.Value) HyaValue {
+func reflectToArli(v reflect.Value) ArliValue {
 	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return HyaInt(v.Int())
+		return ArliInt(v.Int())
 	case reflect.Float32, reflect.Float64:
-		return HyaFloat(v.Float())
+		return ArliFloat(v.Float())
 	case reflect.String:
-		return HyaString(v.String())
+		return ArliString(v.String())
 	case reflect.Bool:
 		if v.Bool() {
 			return True
 		}
 		return False
 	case reflect.Slice, reflect.Array:
-		l := make(HyaList, v.Len())
+		l := make(ArliList, v.Len())
 		for i := 0; i < v.Len(); i++ {
-			l[i] = reflectToHya(v.Index(i))
+			l[i] = reflectToArli(v.Index(i))
 		}
 		return l
 	case reflect.Map:
@@ -291,7 +291,7 @@ func reflectToHya(v reflect.Value) HyaValue {
 		if v.IsNil() {
 			return Nil
 		}
-		return reflectToHya(v.Elem())
+		return reflectToArli(v.Elem())
 	case reflect.Func:
 		return &GoValue{Value: v}
 	case reflect.Struct:

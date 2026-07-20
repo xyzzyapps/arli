@@ -1,4 +1,4 @@
-"""Environment for arli — maps symbols to values."""
+﻿"""Environment for arli â€” maps symbols to values."""
 
 from __future__ import annotations
 from typing import Any, Optional

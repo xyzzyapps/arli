@@ -1,4 +1,4 @@
-"""CLI entry point for arli.
+﻿"""CLI entry point for arli.
 
 Usage:
     python -m arli              # Start REPL
@@ -12,12 +12,12 @@ import argparse
 
 from .eval import Evaluator
 from .repl import REPL
-from .types import hya_repr
+from .types import arli_repr
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="arli — Arity-driven Forth-like Lisp")
+        description="arli â€” Arity-driven Forth-like Lisp")
     parser.add_argument("files", nargs="*", help=".arli files to execute")
     parser.add_argument("-d", "--debug", action="store_true",
                         help="Enable debug output")
@@ -30,7 +30,7 @@ def main() -> None:
         # Evaluate a single expression
         ev = Evaluator(debug=args.debug)
         result = ev.exec(args.eval)
-        print(hya_repr(result))
+        print(arli_repr(result))
         return
 
     if args.files:

@@ -1,0 +1,26 @@
+;; Hya common test: nil and truthiness
+;;
+;; test: nil is nil
+nil
+;; expect: nil
+
+;; test: nil is falsey in if
+if nil "true-branch" "false-branch"
+;; expect: "false-branch"
+
+;; test: true is truthy
+if true 42 0
+;; expect: 42
+
+;; test: numbers are truthy
+if 0 "truthy" "falsey"
+;; expect: "truthy"
+
+;; test: strings are truthy
+if "" "truthy" "falsey"
+;; expect: "truthy"
+
+
+
+
+

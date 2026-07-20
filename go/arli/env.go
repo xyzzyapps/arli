@@ -1,31 +1,31 @@
-package main
+﻿package main
 
 import "fmt"
 
 // ---------------------------------------------------------------------------
-// Environment — lexical scoping with parent chain
+// Environment â€” lexical scoping with parent chain
 // ---------------------------------------------------------------------------
 
 type Environment struct {
 	parent  *Environment
 	name    string
-	bindings map[string]HyaValue
+	bindings map[string]ArliValue
 }
 
 func NewEnvironment(parent *Environment, name string) *Environment {
 	return &Environment{
 		parent:   parent,
 		name:     name,
-		bindings: make(map[string]HyaValue),
+		bindings: make(map[string]ArliValue),
 	}
 }
 
-func (env *Environment) Define(name string, value HyaValue) HyaValue {
+func (env *Environment) Define(name string, value ArliValue) ArliValue {
 	env.bindings[name] = value
 	return value
 }
 
-func (env *Environment) Lookup(name string) (HyaValue, bool) {
+func (env *Environment) Lookup(name string) (ArliValue, bool) {
 	if v, ok := env.bindings[name]; ok {
 		return v, true
 	}
@@ -35,7 +35,7 @@ func (env *Environment) Lookup(name string) (HyaValue, bool) {
 	return nil, false
 }
 
-func (env *Environment) Get(name string) (HyaValue, error) {
+func (env *Environment) Get(name string) (ArliValue, error) {
 	v, ok := env.Lookup(name)
 	if !ok {
 		return nil, fmt.Errorf("undefined symbol: %s", name)
@@ -43,7 +43,7 @@ func (env *Environment) Get(name string) (HyaValue, error) {
 	return v, nil
 }
 
-func (env *Environment) Set(name string, value HyaValue) error {
+func (env *Environment) Set(name string, value ArliValue) error {
 	if _, ok := env.bindings[name]; ok {
 		env.bindings[name] = value
 		return nil

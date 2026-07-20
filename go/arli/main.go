@@ -1,4 +1,4 @@
-package main
+﻿package main
 
 import (
 	"bufio"
@@ -40,7 +40,7 @@ func runFile(path string) {
 				os.Exit(1)
 			}
 			if result != nil {
-				fmt.Println(result.HyaRepr())
+				fmt.Println(result.ArliRepr())
 			}
 		}
 	}
@@ -49,13 +49,13 @@ func runFile(path string) {
 func repl() {
 	ev := NewEvaluator()
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Println("Hya Go v0.1.0")
+	fmt.Println("Arli Go v0.1.0")
 	fmt.Println("Arity-driven Lisp with Forth-like stack operations")
 	fmt.Println("Type 'exit' or Ctrl+C to quit")
 	fmt.Println()
 
 	for {
-		fmt.Print("hya> ")
+		fmt.Print("arli> ")
 		if !scanner.Scan() {
 			break
 		}
@@ -72,7 +72,7 @@ func repl() {
 			} else {
 				fmt.Printf("Stack (%d items):\n", len(ev.Stack))
 				for i, v := range ev.Stack {
-					fmt.Printf("  %d: %s\n", i, v.HyaRepr())
+					fmt.Printf("  %d: %s\n", i, v.ArliRepr())
 				}
 			}
 			continue
@@ -137,7 +137,7 @@ func repl() {
 					break
 				}
 				if result != nil {
-					fmt.Println(result.HyaRepr())
+					fmt.Println(result.ArliRepr())
 				}
 			}
 		}
@@ -150,7 +150,7 @@ func repl() {
 func printEnv(env *Environment, depth int) {
 	prefix := strings.Repeat("  ", depth)
 	for k, v := range env.bindings {
-		fmt.Printf("%s  %s: %s\n", prefix, k, v.HyaRepr())
+		fmt.Printf("%s  %s: %s\n", prefix, k, v.ArliRepr())
 	}
 	if env.parent != nil {
 		fmt.Printf("%s(parent)\n", prefix)

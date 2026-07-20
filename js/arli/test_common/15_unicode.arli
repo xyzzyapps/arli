@@ -1,0 +1,39 @@
+;; Hya common test: Unicode symbol support
+;;
+;; test: Greek letter lambda as function name
+define λ (fn (x) * x 2)
+;; expect: <fn anon>
+λ 5
+;; expect: 10
+
+;; test: Chinese characters as function name
+define 加倍 (fn (x) * x 2)
+;; expect: <fn anon>
+加倍 3
+;; expect: 6
+
+;; test: Math symbol as function name
+define ∑ (fn (x y) + x y)
+;; expect: <fn anon>
+∑ 10 20
+;; expect: 30
+
+;; test: Russian letters as function name
+define привет (fn (x) + x 1)
+;; expect: <fn anon>
+привет 41
+;; expect: 42
+
+;; test: Mixed ASCII and Unicode
+define fooλbar (fn (x) * x 3)
+;; expect: <fn anon>
+fooλbar 7
+;; expect: 21
+
+;; test: Single Unicode character
+define π 3.14159
+;; expect: 3.14159
+* π 2
+;; expect: 6.28318
+
+

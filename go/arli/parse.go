@@ -1,7 +1,7 @@
-package main
+﻿package main
 
 // ---------------------------------------------------------------------------
-// ArityTable — maps symbol names to their arity
+// ArityTable â€” maps symbol names to their arity
 // ---------------------------------------------------------------------------
 
 type ArityTable struct {
@@ -22,7 +22,7 @@ func (at *ArityTable) Get(name string) (int, bool) {
 }
 
 // ---------------------------------------------------------------------------
-// Parser — arity-driven S-expression parser
+// Parser â€” arity-driven S-expression parser
 // ---------------------------------------------------------------------------
 
 type Parser struct {
@@ -33,10 +33,10 @@ func NewParser(at *ArityTable) *Parser {
 	return &Parser{arities: at}
 }
 
-func (p *Parser) Parse(source string) []HyaValue {
+func (p *Parser) Parse(source string) []ArliValue {
 	tokens := Tokenize(source)
 	stream := NewTokenStream(tokens)
-	var exprs []HyaValue
+	var exprs []ArliValue
 	for !stream.IsEOF() {
 		expr := p.parseExpr(stream, true)
 		if expr != nil {
@@ -46,7 +46,7 @@ func (p *Parser) Parse(source string) []HyaValue {
 	return exprs
 }
 
-func (p *Parser) parseExpr(stream *TokenStream, allowArity bool) HyaValue {
+func (p *Parser) parseExpr(stream *TokenStream, allowArity bool) ArliValue {
 	tok := stream.Peek()
 
 	switch tok.Type {
@@ -65,38 +65,38 @@ func (p *Parser) parseExpr(stream *TokenStream, allowArity bool) HyaValue {
 	case TK_QUOTE:
 		stream.Next()
 		expr := p.parseExpr(stream, true)
-		return HyaList{HyaSymbol("quote"), expr}
+		return ArliList{ArliSymbol("quote"), expr}
 
 	case TK_QUASIQUOTE:
 		stream.Next()
 		expr := p.parseExpr(stream, true)
-		return HyaList{HyaSymbol("quasiquote"), expr}
+		return ArliList{ArliSymbol("quasiquote"), expr}
 
 	case TK_UNQUOTE:
 		stream.Next()
 		expr := p.parseExpr(stream, true)
-		return HyaList{HyaSymbol("unquote"), expr}
+		return ArliList{ArliSymbol("unquote"), expr}
 
 	case TK_UNQUOTE_SPLICE:
 		stream.Next()
 		expr := p.parseExpr(stream, true)
-		return HyaList{HyaSymbol("unquote-splicing"), expr}
+		return ArliList{ArliSymbol("unquote-splicing"), expr}
 
 	case TK_NUMBER:
 		stream.Next()
 		f := tok.Num
 		if f == float64(int64(f)) {
-			return HyaInt(int64(f))
+			return ArliInt(int64(f))
 		}
-		return HyaFloat(f)
+		return ArliFloat(f)
 
 	case TK_STRING:
 		stream.Next()
-		return HyaString(tok.Str)
+		return ArliString(tok.Str)
 
 	case TK_KEYWORD:
 		stream.Next()
-		return HyaSymbol(tok.Value)
+		return ArliSymbol(tok.Value)
 
 	case TK_SYMBOL:
 		stream.Next()
@@ -108,12 +108,12 @@ func (p *Parser) parseExpr(stream *TokenStream, allowArity bool) HyaValue {
 		}
 
 		if !allowArity {
-			return HyaSymbol(name)
+			return ArliSymbol(name)
 		}
 
 		// Arity-driven consumption
 		if arity, ok := p.arities.Get(name); ok && arity >= 0 {
-			args := make([]HyaValue, arity)
+			args := make([]ArliValue, arity)
 			for i := 0; i < arity; i++ {
 				arg := p.parseExpr(stream, true)
 				if arg == nil {
@@ -121,21 +121,21 @@ func (p *Parser) parseExpr(stream *TokenStream, allowArity bool) HyaValue {
 				}
 				args[i] = arg
 			}
-			result := make(HyaList, arity+1)
-			result[0] = HyaSymbol(name)
+			result := make(ArliList, arity+1)
+			result[0] = ArliSymbol(name)
 			copy(result[1:], args)
 			return result
 		}
 
-		return HyaSymbol(name)
+		return ArliSymbol(name)
 	}
 
 	return nil
 }
 
-func (p *Parser) parseParenList(stream *TokenStream) HyaValue {
+func (p *Parser) parseParenList(stream *TokenStream) ArliValue {
 	stream.Expect(TK_OPEN) // consume (
-	var items []HyaValue
+	var items []ArliValue
 	isFirst := true
 
 	for {
@@ -160,19 +160,19 @@ func (p *Parser) parseParenList(stream *TokenStream) HyaValue {
 	// Unwrap single-element (defn ...) forms produced by
 	// parseDefnRec and (via arity-driven) top-level defn
 	if len(items) == 1 {
-		if list, ok := items[0].(HyaList); ok && len(list) > 0 {
-			if sym, ok := list[0].(HyaSymbol); ok && string(sym) == "defn" {
+		if list, ok := items[0].(ArliList); ok && len(list) > 0 {
+			if sym, ok := list[0].(ArliSymbol); ok && string(sym) == "defn" {
 				return list
 			}
 		}
 	}
 
-	return HyaList(items)
+	return ArliList(items)
 }
 
-func (p *Parser) parseBracketList(stream *TokenStream) HyaValue {
+func (p *Parser) parseBracketList(stream *TokenStream) ArliValue {
 	stream.Expect(TK_VECTOR_OPEN) // consume [
-	var items []HyaValue
+	var items []ArliValue
 	for {
 		tok := stream.Peek()
 		if tok.Type == TK_VECTOR_CLOSE {
@@ -188,15 +188,15 @@ func (p *Parser) parseBracketList(stream *TokenStream) HyaValue {
 		}
 	}
 	// Return (list item1 item2 ...)
-	result := make(HyaList, len(items)+1)
-	result[0] = HyaSymbol("list")
+	result := make(ArliList, len(items)+1)
+	result[0] = ArliSymbol("list")
 	copy(result[1:], items)
 	return result
 }
 
-func (p *Parser) parseMapLiteral(stream *TokenStream) HyaValue {
+func (p *Parser) parseMapLiteral(stream *TokenStream) ArliValue {
 	stream.Expect(TK_MAP_OPEN) // consume {
-	var items []HyaValue
+	var items []ArliValue
 	for {
 		tok := stream.Peek()
 		if tok.Type == TK_MAP_CLOSE {
@@ -212,23 +212,23 @@ func (p *Parser) parseMapLiteral(stream *TokenStream) HyaValue {
 		}
 	}
 	// Return (hash-map :key1 val1 :key2 val2 ...)
-	result := make(HyaList, len(items)+1)
-	result[0] = HyaSymbol("hash-map")
+	result := make(ArliList, len(items)+1)
+	result[0] = ArliSymbol("hash-map")
 	copy(result[1:], items)
 	return result
 }
 
 // parseDefn parses (defn name (params) body...)
 // Used when defn is inside parens as the first element (not arity-driven)
-func (p *Parser) parseDefn(stream *TokenStream) HyaValue {
+func (p *Parser) parseDefn(stream *TokenStream) ArliValue {
 	nameTok := stream.Peek()
 	if nameTok.Type != TK_SYMBOL {
 		panic("defn expects a name")
 	}
-	name := HyaSymbol(stream.Next().Value)
+	name := ArliSymbol(stream.Next().Value)
 
 	params := p.parseExpr(stream, false) // parse (x y z) with no arity on first
-	paramList, ok := params.(HyaList)
+	paramList, ok := params.(ArliList)
 	if !ok {
 		panic("defn expects a parameter list")
 	}
@@ -238,7 +238,7 @@ func (p *Parser) parseDefn(stream *TokenStream) HyaValue {
 	p.arities.Register(string(name), len(paramSyms))
 
 	// Parse body (multiple expressions until close paren)
-	var body []HyaValue
+	var body []ArliValue
 	for {
 		tok := stream.Peek()
 		if tok.Type == TK_CLOSE || tok.Type == TK_EOF {
@@ -253,8 +253,8 @@ func (p *Parser) parseDefn(stream *TokenStream) HyaValue {
 		body = append(body, Nil)
 	}
 
-	result := make(HyaList, 3+len(body))
-	result[0] = HyaSymbol("defn")
+	result := make(ArliList, 3+len(body))
+	result[0] = ArliSymbol("defn")
 	result[1] = name
 	result[2] = paramSyms
 	copy(result[3:], body)
@@ -262,15 +262,15 @@ func (p *Parser) parseDefn(stream *TokenStream) HyaValue {
 }
 
 // parseFn parses (fn (params) body...)
-func (p *Parser) parseFn(stream *TokenStream) HyaValue {
+func (p *Parser) parseFn(stream *TokenStream) ArliValue {
 	params := p.parseExpr(stream, false)
-	paramList, ok := params.(HyaList)
+	paramList, ok := params.(ArliList)
 	if !ok {
 		panic("fn expects a parameter list")
 	}
 	paramSyms := symbolsFromList(paramList)
 
-	var body []HyaValue
+	var body []ArliValue
 	for {
 		tok := stream.Peek()
 		if tok.Type == TK_CLOSE || tok.Type == TK_EOF {
@@ -285,22 +285,22 @@ func (p *Parser) parseFn(stream *TokenStream) HyaValue {
 		body = append(body, Nil)
 	}
 
-	result := make(HyaList, 2+len(body))
-	result[0] = HyaSymbol("fn")
+	result := make(ArliList, 2+len(body))
+	result[0] = ArliSymbol("fn")
 	result[1] = paramSyms
 	copy(result[2:], body)
 	return result
 }
 
-func (p *Parser) parseDefnRec(stream *TokenStream) HyaValue {
+func (p *Parser) parseDefnRec(stream *TokenStream) ArliValue {
 	nameTok := stream.Peek()
 	if nameTok.Type != TK_SYMBOL {
 		panic("defn-rec expects a name")
 	}
-	name := HyaSymbol(stream.Next().Value)
+	name := ArliSymbol(stream.Next().Value)
 
 	params := p.parseExpr(stream, false)
-	paramList, ok := params.(HyaList)
+	paramList, ok := params.(ArliList)
 	if !ok {
 		panic("defn-rec expects a parameter list")
 	}
@@ -310,8 +310,8 @@ func (p *Parser) parseDefnRec(stream *TokenStream) HyaValue {
 	p.arities.Register(string(name), len(paramSyms))
 
 	// Parse ONE body expression (like defn arity 3).
-	// Multiple expressions use (do ...) — consistent with defn.
-	var body []HyaValue
+	// Multiple expressions use (do ...) â€” consistent with defn.
+	var body []ArliValue
 	tok := stream.Peek()
 	if tok.Type != TK_CLOSE && tok.Type != TK_EOF {
 		expr := p.parseExpr(stream, true)
@@ -323,8 +323,8 @@ func (p *Parser) parseDefnRec(stream *TokenStream) HyaValue {
 		body = append(body, Nil)
 	}
 
-	result := make(HyaList, 3+len(body))
-	result[0] = HyaSymbol("defn")
+	result := make(ArliList, 3+len(body))
+	result[0] = ArliSymbol("defn")
 	result[1] = name
 	result[2] = paramSyms
 	copy(result[3:], body)

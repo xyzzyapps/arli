@@ -1,4 +1,4 @@
-"""Arity-driven parser for arli."""
+﻿"""Arity-driven parser for arli."""
 
 from __future__ import annotations
 from typing import Any, Optional
@@ -199,7 +199,7 @@ class Parser:
         param_syms = self._parse_params_list(stream)
         self.arity_table.register(name_sym.name, len(param_syms))
         # Parse one body expression (like defn arity 3). Multiple expressions
-        # use (do ...) — consistent with defn at top level.
+        # use (do ...) â€” consistent with defn at top level.
         body: list[Any] = []
         tok = stream.peek()
         if tok is not None and tok[0] not in (TOKEN_CLOSE, TOKEN_VECTOR_CLOSE, TOKEN_MAP_CLOSE):

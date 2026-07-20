@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
-"""Common test runner for arli — runs .arli test files and verifies outputs.
+﻿#!/usr/bin/env python3
+"""Common test runner for arli â€” runs .arli test files and verifies outputs.
 
 Usage:
     python tests/run_tests.py              # test Python backend
@@ -52,7 +52,7 @@ def parse_expected(filepath):
 def run_python(filepath):
     """Run a .arli file with the Python backend, return output lines."""
     from arli.eval import Evaluator
-    from arli.types import hya_repr, nil
+    from arli.types import arli_repr, nil
 
     ev = Evaluator()
     source = open(filepath, 'r', encoding='utf-8').read()
@@ -73,7 +73,7 @@ def run_python(filepath):
         if expr is not None:
             result = ev.eval(expr)
             if result is not None:
-                output.append(hya_repr(result))
+                output.append(arli_repr(result))
     return output
 
 

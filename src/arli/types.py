@@ -1,4 +1,4 @@
-"""Core data types for arli.
+﻿"""Core data types for arli.
 
 arli's type system is minimal:
 - Numbers (int, float)
@@ -14,12 +14,12 @@ from __future__ import annotations
 from typing import Any, Optional
 
 
-class HyaType:
+class ArliType:
     """Base type for all arli runtime objects."""
     pass
 
 
-class Symbol(HyaType):
+class Symbol(ArliType):
     """A named symbol, used for variable references and special forms."""
 
     def __init__(self, name: str) -> None:
@@ -41,7 +41,7 @@ class Symbol(HyaType):
 
 
 # Sentinel for the empty list / false value
-class NilType(HyaType):
+class NilType(ArliType):
     """Represents the empty list () and is the canonical false value."""
 
     _instance: Optional[NilType] = None
@@ -61,7 +61,7 @@ class NilType(HyaType):
 nil = NilType()
 
 
-class Builtin(HyaType):
+class Builtin(ArliType):
     """A Python function wrapped with arity metadata.
 
     The arity tells the parser how many expressions to consume as arguments.
@@ -82,7 +82,7 @@ class Builtin(HyaType):
         return f"<Builtin {self.name} arity={self.arity}>"
 
 
-class Function(HyaType):
+class Function(ArliType):
     """A user-defined closure with known arity."""
 
     def __init__(self, params: list[Symbol], body: Any,
@@ -104,7 +104,7 @@ def is_truthy(val: Any) -> bool:
     return val is not nil and val is not False
 
 
-def hya_repr(val: Any) -> str:
+def arli_repr(val: Any) -> str:
     """Convert a arli value to its string representation."""
     if val is nil:
         return "nil"
@@ -113,7 +113,7 @@ def hya_repr(val: Any) -> str:
     if isinstance(val, list):
         if not val:
             return "()"
-        return "(" + " ".join(hya_repr(v) for v in val) + ")"
+        return "(" + " ".join(arli_repr(v) for v in val) + ")"
     if isinstance(val, bool):
         return "true" if val else "false"
     if isinstance(val, float):

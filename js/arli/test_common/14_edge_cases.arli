@@ -1,0 +1,96 @@
+;; Edge cases and additional coverage
+;;
+;; test: if with expression condition and result
++ (if true 1 2) (if false 10 20)
+;; expect: 21
+
+;; test: for loop tracking last value
+define last nil
+;; expect: nil
+for x (list 1 2 3) set! last x
+;; expect: 3
+last
+;; expect: 3
+
+;; test: for loop accumulating sum
+define sum 0
+;; expect: 0
+for x (list 1 2 3 4 5) set! sum + sum x
+;; expect: 15
+sum
+;; expect: 15
+
+;; test: defn without parens (arity 3)
+defn sub (x y) - x y
+;; expect: <fn sub>
+sub 10 3
+;; expect: 7
+
+;; test: fn without parens (arity 2) via define
+define triple fn (x) * x 3
+;; expect: <fn anon>
+triple 5
+;; expect: 15
+
+;; test: let with do body
+let ((x 1)) (do set! x + x 1 set! x + x 1 x)
+;; expect: 3
+
+;; test: while with do body
+define j 0
+;; expect: 0
+while (< j 3) (do set! j + j 1)
+;; expect: 3
+j
+;; expect: 3
+
+;; test: while with single body expression
+define x 1
+;; expect: 1
+while (< x 10) set! x * x 2
+;; expect: 16
+x
+;; expect: 16
+
+;; test: quote list
+quote (1 2 3)
+;; expect: (1 2 3)
+
+;; test: set returns value
+define y 1
+;; expect: 1
+set! y 2
+;; expect: 2
+
+;; test: multiple defines and expression
+define a 1
+;; expect: 1
+define b 2
+;; expect: 2
+define c + a b
+;; expect: 3
+c
+;; expect: 3
+
+;; test: neg on integer
+neg 42
+;; expect: -42
+
+;; test: neg on float
+neg 3.14
+;; expect: -3.14
+
+;; test: nested if
+if true (if false 1 2) 3
+;; expect: 2
+
+;; test: cond finds first match
+cond (false "a" nil "b" true "yes" true "never")
+;; expect: "yes"
+
+;; test: cond with no matches
+cond (false 1 nil 2)
+;; expect: nil
+
+
+

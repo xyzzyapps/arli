@@ -1,4 +1,4 @@
-"""Stack-based evaluator for arli.
+﻿"""Stack-based evaluator for arli.
 
 Evaluation model (Forth-like + Lisp):
 1. Expressions are evaluated left-to-right, top-down
@@ -14,7 +14,7 @@ Evaluation model (Forth-like + Lisp):
 from __future__ import annotations
 from typing import Any, Optional
 
-from .types import Symbol, nil, Builtin, Function, is_truthy, hya_repr
+from .types import Symbol, nil, Builtin, Function, is_truthy, arli_repr
 from .env import Environment
 from .parse import ArityTable, Parser, parse_source
 from .builtins import get_builtins
@@ -64,8 +64,8 @@ class Evaluator:
             if builtin.arity >= 0:
                 self.arity_table.register(name, builtin.arity)
             # arity -1 (variadic) means the symbol is registered but with
-            # 'variadic' marker — user must use parens
-        # Special form arities — ALL fixed, no parens needed
+            # 'variadic' marker â€” user must use parens
+        # Special form arities â€” ALL fixed, no parens needed
         self.arity_table.register("define", 2)   # define name value
         self.arity_table.register("quote", 1)    # quote expr
         self.arity_table.register("do", -1)      # do -> variadic (use parens)
@@ -108,7 +108,7 @@ class Evaluator:
     def _eval_expr(self, expr: Any) -> Any:
         """Internal recursive evaluation of a single expression."""
         if self.debug:
-            print(f"  EVAL: {hya_repr(expr)}  stack=[{','.join(hya_repr(e) for e in self.stack[-3:])}]")
+            print(f"  EVAL: {arli_repr(expr)}  stack=[{','.join(arli_repr(e) for e in self.stack[-3:])}]")
 
         # Literals evaluate to themselves
         if isinstance(expr, (int, float, str)):
@@ -321,7 +321,7 @@ class Evaluator:
                                 obj[idx] = value
                                 return value
                 raise SyntaxError(
-                    f"set! cannot set on target: {hya_repr(name_expr)}")
+                    f"set! cannot set on target: {arli_repr(name_expr)}")
             # LET: local bindings
             if isinstance(head, Symbol) and head.name == "let":
                 if len(expr) < 3:
@@ -396,7 +396,7 @@ class Evaluator:
                                 f"'{type(obj).__name__}' "
                                 f"has no attribute '{attr_name}'")
                     else:
-                        # Not a symbol — start of call args
+                        # Not a symbol â€” start of call args
                         break
                 # If we have remaining items, call the result
                 if i < len(expr):
@@ -438,10 +438,10 @@ class Evaluator:
                     msg = ""
                     if len(expr) >= 3:
                         msg = self._eval_expr(expr[2])
-                    raise AssertionError(f"Assertion failed: {hya_repr(msg)}")
+                    raise AssertionError(f"Assertion failed: {arli_repr(msg)}")
                 return val
 
-            # DOC: (doc symbol) — retrieve documentation
+            # DOC: (doc symbol) â€” retrieve documentation
             if isinstance(head, Symbol) and head.name == "doc":
                 if len(expr) >= 2:
                     sym = expr[1]
@@ -451,7 +451,7 @@ class Evaluator:
                             return doc_val
                 return nil
 
-            # DOC!: (doc! symbol "text") — store documentation
+            # DOC!: (doc! symbol "text") â€” store documentation
             if isinstance(head, Symbol) and head.name == "doc!":
                 if len(expr) >= 3:
                     sym = expr[1]
@@ -541,7 +541,7 @@ class Evaluator:
                 return fn_val(*args)
 
             raise TypeError(
-                f"Cannot call non-function: {hya_repr(fn_val)}")
+                f"Cannot call non-function: {arli_repr(fn_val)}")
 
         raise TypeError(f"Unknown expression type: {type(expr)}: {expr}")
 
@@ -553,7 +553,7 @@ class Evaluator:
             return self._apply_function(fn, args)
         if callable(fn):
             return fn(*args)
-        raise TypeError(f"Cannot call non-function: {hya_repr(fn)}")
+        raise TypeError(f"Cannot call non-function: {arli_repr(fn)}")
 
     def _apply_function(self, fn: Function, args: list) -> Any:
         """Apply a user-defined function with given arguments.

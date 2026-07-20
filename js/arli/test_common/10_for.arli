@@ -1,0 +1,22 @@
+;; Hya common test: for loop
+;;
+;; test: for iterates over list
+define last nil
+;; expect: nil
+for x (list 1 2 3) set! last x
+;; expect: 3
+last
+;; expect: 3
+
+;; test: for with side effect
+define sum 0
+;; expect: 0
+for x (list 1 2 3 4 5) set! sum + sum x
+;; expect: 15
+sum
+;; expect: 15
+
+
+
+
+

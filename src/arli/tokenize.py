@@ -1,4 +1,4 @@
-"""Tokenizer for arli.
+﻿"""Tokenizer for arli.
 
 Converts source text into a flat list of tokens.
 Tokens are: numbers, strings, symbols, and punctuation ()[]{}.

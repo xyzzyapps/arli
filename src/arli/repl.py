@@ -1,4 +1,4 @@
-"""Interactive REPL for arli.
+﻿"""Interactive REPL for arli.
 
 Provides a Read-Eval-Print Loop with:
 - Full arity-driven parsing
@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Optional
 
 from .eval import Evaluator
-from .types import hya_repr
+from .types import arli_repr
 
 
 class REPL:
@@ -136,9 +136,9 @@ class REPL:
                 result = self.evaluator._eval_expr(expr)
                 if result is not None:
                     self.evaluator.stack.append(result)
-                    print(hya_repr(result))
+                    print(arli_repr(result))
         except SyntaxError as e:
-            # Maybe it's a partial expression — try wrapping in parens
+            # Maybe it's a partial expression â€” try wrapping in parens
             raise e
 
     def _handle_command(self, cmd: str) -> None:
@@ -175,7 +175,7 @@ class REPL:
             return
         print(f"Stack ({len(stack)} items):")
         for i, val in enumerate(stack):
-            print(f"  {i}: {hya_repr(val)}")
+            print(f"  {i}: {arli_repr(val)}")
 
     def _show_env(self) -> None:
         """Display the current environment bindings."""
@@ -193,7 +193,7 @@ class REPL:
             return
         print(f"Environment ({len(bindings)} bindings):")
         for name, val in sorted(bindings.items()):
-            print(f"  {name}: {hya_repr(val)}")
+            print(f"  {name}: {arli_repr(val)}")
 
     def _show_arity(self) -> None:
         """Display all registered arities."""
@@ -208,7 +208,7 @@ class REPL:
 
     def _show_help(self) -> None:
         """Display help."""
-        print("arli — Arity-driven Forth-like Lisp")
+        print("arli â€” Arity-driven Forth-like Lisp")
         print()
         print("Basic syntax:")
         print("  + 1 2          ; arity-driven, no parens needed")

@@ -1,4 +1,4 @@
-"""Tests for the arli tokenizer."""
+﻿"""Tests for the arli tokenizer."""
 
 import sys
 import os

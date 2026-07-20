@@ -1,4 +1,4 @@
-"""Built-in functions for arli.
+﻿"""Built-in functions for arli.
 
 Each builtin has a known arity. Arity -1 means 'unknown/variadic' and
 requires parentheses in source.
@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from .types import (Symbol, nil, Builtin, Function, is_truthy,
-                    nil, hya_repr)
+                    nil, arli_repr)
 from .env import Environment
 
 
@@ -86,7 +86,7 @@ def _ne(a, b, evaluator=None):
 # ---------------------------------------------------------------------------
 
 def _and(*args, evaluator=None):
-    """Short-circuit AND. Variadic — must use parens."""
+    """Short-circuit AND. Variadic â€” must use parens."""
     for arg in args:
         if not is_truthy(arg):
             return arg
@@ -94,7 +94,7 @@ def _and(*args, evaluator=None):
 
 
 def _or(*args, evaluator=None):
-    """Short-circuit OR. Variadic — must use parens."""
+    """Short-circuit OR. Variadic â€” must use parens."""
     for arg in args:
         if is_truthy(arg):
             return arg
@@ -120,7 +120,7 @@ def _dup(a, evaluator=None):
 
 
 def _swap(a, b, evaluator=None):
-    """Swap top two items on stack — returns b then a."""
+    """Swap top two items on stack â€” returns b then a."""
     if evaluator is not None:
         evaluator.stack.pop()  # remove b
         evaluator.stack.pop()  # remove a
@@ -205,7 +205,7 @@ def _cdr(lst, evaluator=None):
 
 
 def _list(*args, evaluator=None):
-    """Create a list. Variadic — requires parens."""
+    """Create a list. Variadic â€” requires parens."""
     return list(args)
 
 
@@ -223,13 +223,13 @@ def _is_list(val, evaluator=None):
 
 def _print(val, evaluator=None):
     """Print a value followed by newline."""
-    print(hya_repr(val))
+    print(arli_repr(val))
     return val
 
 
 def _pr(val, evaluator=None):
     """Print a value (like Forth .)."""
-    print(hya_repr(val), end="")
+    print(arli_repr(val), end="")
     return val
 
 
@@ -434,7 +434,7 @@ def get_builtins() -> dict[str, Builtin]:
         then restore it with stack!.
         
         Example:
-            stack          ;; push (42 \"hello\" 3) — a copy of the stack
+            stack          ;; push (42 \"hello\" 3) â€” a copy of the stack
             filter number? ;; keep only numbers
             stack!         ;; replace the evaluator's stack
         """
@@ -525,7 +525,7 @@ def get_builtins() -> dict[str, Builtin]:
         return evaluator._eval_expr(form)
     reg("exec-step", _exec_step, 0)
 
-    # exec-all: process exec stack until empty — variadic (parens required)
+    # exec-all: process exec stack until empty â€” variadic (parens required)
     def _exec_all(*args, evaluator=None):
         """Process the entire exec stack until empty. (arity -1, parens)
         
@@ -613,7 +613,7 @@ def get_builtins() -> dict[str, Builtin]:
                     evaluator.env = call_env
                     last = None
                 elif callable(fn):
-                    # Python callable — pop args? Use arity from signature
+                    # Python callable â€” pop args? Use arity from signature
                     try:
                         import inspect
                         sig = inspect.signature(fn)

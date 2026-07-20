@@ -1,4 +1,4 @@
-package main
+﻿package main
 
 import (
 	"fmt"
@@ -12,7 +12,9 @@ import (
 // ---------------------------------------------------------------------------
 
 type Evaluator struct {
-	Stack     []HyaValue
+	Stack     []ArliValue    // Data stack
+	ExecStack []ArliValue    // Push-style exec stack for self-modifying code
+	EnvStack  []*Environment // Environment stack for function calls in Push mode
 	Env       *Environment
 	GlobalEnv *Environment
 	Arities   *ArityTable
@@ -21,10 +23,11 @@ type Evaluator struct {
 
 func NewEvaluator() *Evaluator {
 	ev := &Evaluator{
-		Stack:     make([]HyaValue, 0),
+		Stack:     make([]ArliValue, 0),
+		ExecStack: make([]ArliValue, 0),
+		EnvStack:  make([]*Environment, 0),
 		Arities:   NewArityTable(),
-	}
-	ev.GlobalEnv = NewEnvironment(nil, "global")
+	}	ev.GlobalEnv = NewEnvironment(nil, "global")
 	ev.Env = ev.GlobalEnv
 	ev.parser = NewParser(ev.Arities)
 	ev.loadBuiltins()
@@ -38,7 +41,7 @@ func (ev *Evaluator) loadBuiltins() {
 			ev.Arities.Register(name, b.Arity)
 		}
 	}
-	// Special form arities — ALL fixed, matching Python backend
+	// Special form arities â€” ALL fixed, matching Python backend
 	ev.Arities.Register("define", 2)   // define name value
 	ev.Arities.Register("quote", 1)    // quote expr
 	ev.Arities.Register("do", -1)      // do -> variadic (use parens)
@@ -62,7 +65,7 @@ func (ev *Evaluator) loadBuiltins() {
 	ev.Arities.Register("defn-fexpr", 3)    // defn-fexpr name (params) body
 }
 
-func (ev *Evaluator) Eval(expr HyaValue) (HyaValue, error) {
+func (ev *Evaluator) Eval(expr ArliValue) (ArliValue, error) {
 	
 	result, err := ev.evalExpr(expr)
 	if err != nil {
@@ -75,16 +78,16 @@ func (ev *Evaluator) Eval(expr HyaValue) (HyaValue, error) {
 	return result, nil
 }
 
-func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
+func (ev *Evaluator) evalExpr(expr ArliValue) (ArliValue, error) {
 	// Literals
 	switch v := expr.(type) {
-	case HyaInt, HyaFloat, HyaString:
+	case ArliInt, ArliFloat, ArliString:
 		return v, nil
-	case HyaNil:
+	case ArliNil:
 		return v, nil
-	case HyaBool:
+	case ArliBool:
 		return v, nil
-	case HyaSymbol:
+	case ArliSymbol:
 		name := string(v)
 		// Keywords self-evaluate
 		if strings.HasPrefix(name, ":") {
@@ -106,13 +109,13 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 		}
 		return val, nil
 
-	case HyaList:
+	case ArliList:
 		if len(v) == 0 {
 			return Nil, nil
 		}
 
 		head := v[0]
-		sym, isSym := head.(HyaSymbol)
+		sym, isSym := head.(ArliSymbol)
 
 		// Non-symbol head: evaluate head, args, apply
 		if !isSym {
@@ -120,7 +123,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			if err != nil {
 				return nil, err
 			}
-			args := make([]HyaValue, len(v)-1)
+			args := make([]ArliValue, len(v)-1)
 			for i, a := range v[1:] {
 				args[i], err = ev.evalExpr(a)
 				if err != nil {
@@ -149,14 +152,14 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			}
 			nameExpr := v[1]
 			valueExpr := v[2]
-			if s, ok := nameExpr.(HyaSymbol); ok {
+			if s, ok := nameExpr.(ArliSymbol); ok {
 				val, err := ev.evalExpr(valueExpr)
 				if err != nil {
 					return nil, err
 				}
 				ev.Env.Define(string(s), val)
 				// Register arity for functions
-				if fn, ok := val.(*HyaFn); ok {
+				if fn, ok := val.(*ArliFn); ok {
 					ev.Arities.Register(string(s), len(fn.Params))
 				} else if gv, ok := val.(*GoValue); ok && gv.Value.Kind() == reflect.Func {
 					t := gv.Value.Type()
@@ -174,24 +177,24 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			if len(v) < 4 {
 				return nil, fmt.Errorf("defn expects (defn name (params) body...)")
 			}
-			nameSym, ok := v[1].(HyaSymbol)
+			nameSym, ok := v[1].(ArliSymbol)
 			if !ok {
 				return nil, fmt.Errorf("defn expects a symbol name")
 			}
-			params, ok := v[2].(HyaList)
+			params, ok := v[2].(ArliList)
 			if !ok {
 				return nil, fmt.Errorf("defn expects a parameter list")
 			}
-			paramSyms := make([]HyaSymbol, len(params))
+			paramSyms := make([]ArliSymbol, len(params))
 			for i, p := range params {
-				if s, ok := p.(HyaSymbol); ok {
+				if s, ok := p.(ArliSymbol); ok {
 					paramSyms[i] = s
 				} else {
 					return nil, fmt.Errorf("defn params must be symbols")
 				}
 			}
 			body := v[3:]
-			fn := &HyaFn{
+			fn := &ArliFn{
 				Name:   string(nameSym),
 				Params: paramSyms,
 				Body:   body,
@@ -208,24 +211,24 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			if len(v) < 4 {
 				return nil, fmt.Errorf("defn-fexpr expects (defn-fexpr name (params) body...)")
 			}
-			nameSym, ok := v[1].(HyaSymbol)
+			nameSym, ok := v[1].(ArliSymbol)
 			if !ok {
 				return nil, fmt.Errorf("defn-fexpr expects a symbol name")
 			}
-			params, ok := v[2].(HyaList)
+			params, ok := v[2].(ArliList)
 			if !ok {
 				return nil, fmt.Errorf("defn-fexpr expects a parameter list")
 			}
-			paramSyms := make([]HyaSymbol, len(params))
+			paramSyms := make([]ArliSymbol, len(params))
 			for i, p := range params {
-				if s, ok := p.(HyaSymbol); ok {
+				if s, ok := p.(ArliSymbol); ok {
 					paramSyms[i] = s
 				} else {
 					return nil, fmt.Errorf("defn-fexpr params must be symbols")
 				}
 			}
 			body := v[3:]
-			fn := &HyaFn{
+			fn := &ArliFn{
 				Name:    string(nameSym),
 				Params:  paramSyms,
 				Body:    body,
@@ -254,7 +257,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 
 		// DO
 		if name == "do" {
-			result := HyaValue(Nil)
+			result := ArliValue(Nil)
 			var err error
 			for _, sub := range v[1:] {
 				result, err = ev.evalExpr(sub)
@@ -270,20 +273,20 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			if len(v) < 3 {
 				return nil, fmt.Errorf("fn expects (fn (params) body...)")
 			}
-			params, ok := v[1].(HyaList)
+			params, ok := v[1].(ArliList)
 			if !ok {
 				return nil, fmt.Errorf("fn expects a parameter list")
 			}
-			paramSyms := make([]HyaSymbol, len(params))
+			paramSyms := make([]ArliSymbol, len(params))
 			for i, p := range params {
-				if s, ok := p.(HyaSymbol); ok {
+				if s, ok := p.(ArliSymbol); ok {
 					paramSyms[i] = s
 				} else {
 					return nil, fmt.Errorf("fn params must be symbols")
 				}
 			}
 			body := v[2:]
-			return &HyaFn{
+			return &ArliFn{
 				Params: paramSyms,
 				Body:   body,
 				Env:    ev.Env,
@@ -295,7 +298,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			if len(v) < 3 {
 				return nil, fmt.Errorf("while expects (while cond body)")
 			}
-			result := HyaValue(Nil)
+			result := ArliValue(Nil)
 			for {
 				cond, err := ev.evalExpr(v[1])
 				if err != nil {
@@ -319,7 +322,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			if len(v) < 4 {
 				return nil, fmt.Errorf("for expects (for var list body)")
 			}
-			varSym, ok := v[1].(HyaSymbol)
+			varSym, ok := v[1].(ArliSymbol)
 			if !ok {
 				return nil, fmt.Errorf("for expects a symbol as variable")
 			}
@@ -327,11 +330,11 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			if err != nil {
 				return nil, err
 			}
-			list, ok := listVal.(HyaList)
+			list, ok := listVal.(ArliList)
 			if !ok {
 				return nil, fmt.Errorf("for expects a list")
 			}
-			result := HyaValue(Nil)
+			result := ArliValue(Nil)
 			for _, item := range list {
 				ev.Env.Define(string(varSym), item)
 				for _, sub := range v[3:] {
@@ -349,7 +352,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			if len(v) < 2 {
 				return nil, fmt.Errorf("cond expects (cond clause...)")
 			}
-			clauses, ok := v[1].(HyaList)
+			clauses, ok := v[1].(ArliList)
 			if !ok {
 				return nil, fmt.Errorf("cond expects a clause list")
 			}
@@ -385,7 +388,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			}
 
 			// Simple variable set!
-			if s, ok := nameExpr.(HyaSymbol); ok && len(v) == 3 {
+			if s, ok := nameExpr.(ArliSymbol); ok && len(v) == 3 {
 				err := ev.Env.Set(string(s), val)
 				if err != nil {
 					return nil, err
@@ -405,17 +408,17 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 					// Use reflect to set map value
 					m := gv.Value
 					var keyVal reflect.Value
-					if s, ok := key.(HyaSymbol); ok && strings.HasPrefix(string(s), ":") {
+					if s, ok := key.(ArliSymbol); ok && strings.HasPrefix(string(s), ":") {
 						keyVal = reflect.ValueOf(string(s))
 					} else {
-						keyVal = reflect.ValueOf(key.HyaRepr())
+						keyVal = reflect.ValueOf(key.ArliRepr())
 					}
 					m.SetMapIndex(keyVal, reflect.ValueOf(val))
 					return val, nil
 				}
 				// List index set!
-				if list, ok := obj.(HyaList); ok {
-					if idx, ok := key.(HyaInt); ok {
+				if list, ok := obj.(ArliList); ok {
+					if idx, ok := key.(ArliInt); ok {
 						i := int(int64(idx))
 						if i >= 0 && i < len(list) {
 							list[i] = val
@@ -424,7 +427,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 					}
 				}
 			}
-			return nil, fmt.Errorf("set! cannot set on target: %s", nameExpr.HyaRepr())
+			return nil, fmt.Errorf("set! cannot set on target: %s", nameExpr.ArliRepr())
 		}
 
 		// LET
@@ -432,7 +435,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			if len(v) < 3 {
 				return nil, fmt.Errorf("let expects (let bindings body)")
 			}
-			bindings, ok := v[1].(HyaList)
+			bindings, ok := v[1].(ArliList)
 			if !ok {
 				return nil, fmt.Errorf("let expects a bindings list")
 			}
@@ -442,11 +445,11 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			oldEnv := ev.Env
 			ev.Env = letEnv
 			var err error
-			result := HyaValue(Nil)
+			result := ArliValue(Nil)
 
 			for _, binding := range bindings {
-				if b, ok := binding.(HyaList); ok && len(b) >= 2 {
-					if bname, ok := b[0].(HyaSymbol); ok {
+				if b, ok := binding.(ArliList); ok && len(b) >= 2 {
+					if bname, ok := b[0].(ArliSymbol); ok {
 						bval, e := ev.evalExpr(b[1])
 						if e != nil {
 							err = e
@@ -468,16 +471,16 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			return result, err
 		}
 
-		// IMPORT — Go module import via reflection
+		// IMPORT â€” Go module import via reflection
 		if name == "import" || name == "import!" {
 			if len(v) < 2 {
 				return nil, fmt.Errorf("import expects (import module-name)")
 			}
 			pkgName := ""
 			switch p := v[1].(type) {
-			case HyaString:
+			case ArliString:
 				pkgName = string(p)
-			case HyaSymbol:
+			case ArliSymbol:
 				pkgName = string(p)
 			default:
 				return nil, fmt.Errorf("import expects a symbol or string")
@@ -488,7 +491,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			}
 			bindName := pkgName
 			if name == "import!" && len(v) >= 3 {
-				if s, ok := v[2].(HyaSymbol); ok {
+				if s, ok := v[2].(ArliSymbol); ok {
 					bindName = string(s)
 				}
 			}
@@ -496,7 +499,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			return mod, nil
 		}
 
-		// DOT — chained attribute access
+		// DOT â€” chained attribute access
 		if name == "." {
 			if len(v) < 3 {
 				return nil, fmt.Errorf(". expects (. obj attr...)")
@@ -508,7 +511,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			i := 2
 			for i < len(v) {
 				item := v[i]
-				if sym, ok := item.(HyaSymbol); ok {
+				if sym, ok := item.(ArliSymbol); ok {
 					if gv, ok := obj.(*GoValue); ok {
 						obj, err = gv.GetField(string(sym))
 						if err != nil {
@@ -524,7 +527,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			}
 			// Call if remaining args
 			if i < len(v) {
-				callArgs := make([]HyaValue, len(v)-i)
+				callArgs := make([]ArliValue, len(v)-i)
 				for j := i; j < len(v); j++ {
 					callArgs[j-i], err = ev.evalExpr(v[j])
 					if err != nil {
@@ -539,12 +542,12 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			return obj, nil
 		}
 
-		// GO — evaluate arbitrary Go expression string (placeholder)
+		// GO â€” evaluate arbitrary Go expression string (placeholder)
 		if name == "go" {
 			if len(v) < 2 {
 				return nil, fmt.Errorf("go expects (go \"code\")")
 			}
-			code, ok := v[1].(HyaString)
+			code, ok := v[1].(ArliString)
 			if !ok {
 				return nil, fmt.Errorf("go expects a string")
 			}
@@ -565,7 +568,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 				if len(v) >= 3 {
 					m, e := ev.evalExpr(v[2])
 					if e == nil {
-						msg = m.HyaRepr()
+						msg = m.ArliRepr()
 					}
 				}
 				return nil, fmt.Errorf("Assertion failed: %s", msg)
@@ -573,11 +576,11 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			return val, nil
 		}
 
-		// DOC: (doc symbol) — retrieve documentation
+		// DOC: (doc symbol) â€” retrieve documentation
 		if name == "doc" {
 			if len(v) >= 2 {
 				sym := v[1]
-				if s, ok := sym.(HyaSymbol); ok {
+				if s, ok := sym.(ArliSymbol); ok {
 					docVal, err := ev.Env.Get("__doc_" + string(s))
 					if err == nil {
 						return docVal, nil
@@ -587,7 +590,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			return Nil, nil
 		}
 
-		// DOC!: (doc! symbol "text") — store documentation
+		// DOC!: (doc! symbol "text") â€” store documentation
 		if name == "doc!" {
 			if len(v) >= 3 {
 				sym := v[1]
@@ -595,7 +598,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 				if err != nil {
 					return nil, err
 				}
-				if s, ok := sym.(HyaSymbol); ok {
+				if s, ok := sym.(ArliSymbol); ok {
 					ev.Env.Define("__doc_"+string(s), docText)
 					return docText, nil
 				}
@@ -612,7 +615,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 				return nil, err
 			}
 			for _, clause := range v[2:] {
-				if cl, ok := clause.(HyaList); ok && len(cl) >= 2 {
+				if cl, ok := clause.(ArliList); ok && len(cl) >= 2 {
 					pattern := cl[0]
 					result := cl[1]
 					if matchPattern(pattern, matchVal) {
@@ -632,7 +635,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			if err != nil {
 				return nil, err
 			}
-			path, ok := pathVal.(HyaString)
+			path, ok := pathVal.(ArliString)
 			if !ok {
 				return nil, fmt.Errorf("import-module expects a string path")
 			}
@@ -646,16 +649,16 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 		}
 
 		// For fexprs, pass raw (unevaluated) argument forms
-		if hf, ok := fn.(*HyaFn); ok && !hf.IsFexpr {
+		if hf, ok := fn.(*ArliFn); ok && !hf.IsFexpr {
 			
 		}
-		if hf, ok := fn.(*HyaFn); ok && hf.IsFexpr {
-			args := make([]HyaValue, len(v)-1)
+		if hf, ok := fn.(*ArliFn); ok && hf.IsFexpr {
+			args := make([]ArliValue, len(v)-1)
 			copy(args, v[1:])
 			return ev.apply(fn, args)
 		}
 
-		args := make([]HyaValue, len(v)-1)
+		args := make([]ArliValue, len(v)-1)
 		for i, a := range v[1:] {
 			args[i], err = ev.evalExpr(a)
 			if err != nil {
@@ -669,19 +672,19 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 }
 
 // matchPattern implements pattern matching for the match form
-func matchPattern(pattern HyaValue, value HyaValue) bool {
-	if sym, ok := pattern.(HyaSymbol); ok {
+func matchPattern(pattern ArliValue, value ArliValue) bool {
+	if sym, ok := pattern.(ArliSymbol); ok {
 		if string(sym) == "_" {
 			return true
 		}
 		// Symbols match by name equality
-		if vs, ok := value.(HyaSymbol); ok {
+		if vs, ok := value.(ArliSymbol); ok {
 			return string(sym) == string(vs)
 		}
 		return false
 	}
-	if plist, ok := pattern.(HyaList); ok {
-		if vlist, ok := value.(HyaList); ok {
+	if plist, ok := pattern.(ArliList); ok {
+		if vlist, ok := value.(ArliList); ok {
 			if len(plist) != len(vlist) {
 				return false
 			}
@@ -695,34 +698,34 @@ func matchPattern(pattern HyaValue, value HyaValue) bool {
 		return false
 	}
 	// Literal matching
-	return hyaEqual(pattern, value)
+	return arliEqual(pattern, value)
 }
 
-// hyaEqual compares two HyaValue for equality
-func hyaEqual(a, b HyaValue) bool {
+// arliEqual compares two ArliValue for equality
+func arliEqual(a, b ArliValue) bool {
 	switch va := a.(type) {
-	case HyaInt:
-		if vb, ok := b.(HyaInt); ok {
+	case ArliInt:
+		if vb, ok := b.(ArliInt); ok {
 			return int64(va) == int64(vb)
 		}
-	case HyaFloat:
-		if vb, ok := b.(HyaFloat); ok {
+	case ArliFloat:
+		if vb, ok := b.(ArliFloat); ok {
 			return float64(va) == float64(vb)
 		}
-	case HyaString:
-		if vb, ok := b.(HyaString); ok {
+	case ArliString:
+		if vb, ok := b.(ArliString); ok {
 			return string(va) == string(vb)
 		}
-	case HyaBool:
-		if vb, ok := b.(HyaBool); ok {
+	case ArliBool:
+		if vb, ok := b.(ArliBool); ok {
 			return bool(va) == bool(vb)
 		}
-	case HyaSymbol:
-		if vb, ok := b.(HyaSymbol); ok {
+	case ArliSymbol:
+		if vb, ok := b.(ArliSymbol); ok {
 			return string(va) == string(vb)
 		}
-	case HyaNil:
-		_, ok := b.(HyaNil)
+	case ArliNil:
+		_, ok := b.(ArliNil)
 		return ok
 	}
 	return false
@@ -732,12 +735,12 @@ func hyaEqual(a, b HyaValue) bool {
 // Function application
 // ---------------------------------------------------------------------------
 
-func (ev *Evaluator) apply(fn HyaValue, args []HyaValue) (HyaValue, error) {
+func (ev *Evaluator) apply(fn ArliValue, args []ArliValue) (ArliValue, error) {
 	switch f := fn.(type) {
-	case *HyaBuiltin:
+	case *ArliBuiltin:
 		return f.Call(args, ev)
 
-	case *HyaFn:
+	case *ArliFn:
 		if len(args) != len(f.Params) {
 			return nil, fmt.Errorf("function %s expected %d args, got %d",
 				f.Name, len(f.Params), len(args))
@@ -751,7 +754,7 @@ func (ev *Evaluator) apply(fn HyaValue, args []HyaValue) (HyaValue, error) {
 			ev.Env.Define(string(param), args[i])
 		}
 
-		result := HyaValue(Nil)
+		result := ArliValue(Nil)
 		var err error
 		for _, sub := range f.Body {
 			result, err = ev.evalExpr(sub)
@@ -765,7 +768,7 @@ func (ev *Evaluator) apply(fn HyaValue, args []HyaValue) (HyaValue, error) {
 		return f.Call(args)
 
 	default:
-		return nil, fmt.Errorf("cannot call non-function: %s", fn.HyaRepr())
+		return nil, fmt.Errorf("cannot call non-function: %s", fn.ArliRepr())
 	}
 }
 
@@ -773,7 +776,7 @@ func (ev *Evaluator) apply(fn HyaValue, args []HyaValue) (HyaValue, error) {
 // Module loading
 // ---------------------------------------------------------------------------
 
-func importGoPackage(pkgPath string) (HyaValue, error) {
+func importGoPackage(pkgPath string) (ArliValue, error) {
 	pkg, ok := goPackages[pkgPath]
 	if !ok {
 		return nil, fmt.Errorf("package not available (pre-registered): %s", pkgPath)
@@ -781,7 +784,7 @@ func importGoPackage(pkgPath string) (HyaValue, error) {
 	return &GoValue{Value: reflect.ValueOf(pkg)}, nil
 }
 
-// goPackages is a registry of pre-loaded Go packages accessible from Hya.
+// goPackages is a registry of pre-loaded Go packages accessible from Arli.
 var goPackages = map[string]interface{}{
 	"fmt":     nil,
 	"strings": nil,
@@ -864,12 +867,12 @@ var osPackage = struct {
 }
 
 // evalGo evaluates a Go expression string (placeholder)
-func (ev *Evaluator) evalGo(code string) (HyaValue, error) {
-	return HyaString(fmt.Sprintf("<go eval: %s>", code)), nil
+func (ev *Evaluator) evalGo(code string) (ArliValue, error) {
+	return ArliString(fmt.Sprintf("<go eval: %s>", code)), nil
 }
 
 // execFile loads and executes an .arli file
-func (ev *Evaluator) execFile(path string) (HyaValue, error) {
+func (ev *Evaluator) execFile(path string) (ArliValue, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read module: %s: %v", path, err)
@@ -878,10 +881,10 @@ func (ev *Evaluator) execFile(path string) (HyaValue, error) {
 }
 
 // exec parses and evaluates arli source code (interleaved parse-eval)
-func (ev *Evaluator) exec(source string) (HyaValue, error) {
+func (ev *Evaluator) exec(source string) (ArliValue, error) {
 	tokens := Tokenize(source)
 	stream := NewTokenStream(tokens)
-	result := HyaValue(Nil)
+	result := ArliValue(Nil)
 	for !stream.IsEOF() {
 		expr := ev.parser.parseExpr(stream, true)
 		if expr != nil {

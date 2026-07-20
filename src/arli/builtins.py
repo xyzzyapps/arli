@@ -351,6 +351,32 @@ def get_builtins() -> dict[str, Builtin]:
     reg("filter", _filter, 2)
     reg("reduce", _reduce, 3)
 
+    # Result type constructors and operations
+    reg("Ok", lambda val, ev=None, **kw: [Symbol("Ok"), val], 1)
+    reg("Err", lambda val, ev=None, **kw: [Symbol("Err"), val], 1)
+    # Result type operations
+    def _map_ok(result, fn, evaluator=None):
+        if evaluator is None:
+            return result
+        if isinstance(result, list) and len(result) == 2 and result[0] == Symbol("Ok"):
+            return [Symbol("Ok"), evaluator.apply(fn, [result[1]])]
+        return result
+    def _and_then(result, fn, evaluator=None):
+        if evaluator is None:
+            return result
+        if isinstance(result, list) and len(result) == 2 and result[0] == Symbol("Ok"):
+            return evaluator.apply(fn, [result[1]])
+        return result
+    def _or_else(result, fn, evaluator=None):
+        if evaluator is None:
+            return result
+        if isinstance(result, list) and len(result) == 2 and result[0] == Symbol("Ok"):
+            return result
+        return evaluator.apply(fn, [])
+    reg("map-ok", _map_ok, 2)
+    reg("and-then", _and_then, 2)
+    reg("or-else", _or_else, 2)
+
     # Hash-map creation
     def make_hash_map(*pairs, evaluator=None):
         result = {}

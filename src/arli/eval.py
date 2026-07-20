@@ -281,18 +281,37 @@ class Evaluator:
                             return self._eval_expr(clauses[i])
                 return nil
 
-            # SET!: mutate a binding
+            # SET!: mutate a binding or nested structure
             if isinstance(head, Symbol) and head.name == "set!":
                 if len(expr) < 3:
-                    raise SyntaxError("set! expects (set! name value)")
+                    raise SyntaxError("set! expects (set! target value)")
                 name_expr = expr[1]
-                value = self._eval_expr(expr[2])
-                if isinstance(name_expr, Symbol):
+                value = self._eval_expr(expr[-1])  # last arg is value
+                if isinstance(name_expr, Symbol) and len(expr) == 3:
+                    # Simple variable set!
                     self.env.set(name_expr.name, value)
                     return value
+                # Nested structure set!: (set! obj key val) or (set! obj :key val)
+                if len(expr) >= 4:
+                    obj = self._eval_expr(expr[1])
+                    key = expr[2]
+                    if len(expr) > 3:
+                        # Multi-arg: (set! map :key val)
+                        if isinstance(obj, dict):
+                            if isinstance(key, Symbol) and key.name.startswith(':'):
+                                obj[key.name] = value
+                            elif isinstance(key, str):
+                                obj[key] = value
+                            else:
+                                obj[str(key)] = value
+                            return value
+                        if isinstance(obj, list) and isinstance(key, (int, float)):
+                            idx = int(key)
+                            if 0 <= idx < len(obj):
+                                obj[idx] = value
+                                return value
                 raise SyntaxError(
-                    f"set! expects a symbol name, got {name_expr}")
-
+                    f"set! cannot set on target: {hya_repr(name_expr)}")
             # LET: local bindings
             if isinstance(head, Symbol) and head.name == "let":
                 if len(expr) < 3:

@@ -103,39 +103,61 @@ def tokenize(source: str) -> list[Token]:
                 i += 1
             continue
 
-        # Strings
+        # Strings (regular and triple-quoted)
         if ch == '"':
-            i += 1
-            s: list[str] = []
-            while i < length:
-                c = source[i]
-                if c == '"':
-                    i += 1
-                    break
-                if c == '\\' and i + 1 < length:
-                    esc = source[i + 1]
-                    if esc == 'n':
-                        s.append('\n')
-                        i += 2
-                    elif esc == 't':
-                        s.append('\t')
-                        i += 2
-                    elif esc == 'r':
-                        s.append('\r')
-                        i += 2
-                    elif esc == '"':
-                        s.append('"')
-                        i += 2
-                    elif esc == '\\':
-                        s.append('\\')
-                        i += 2
+            # Check for triple-quoted string """
+            if i + 2 < length and source[i+1] == '"' and source[i+2] == '"':
+                i += 3  # skip opening """
+                s: list[str] = []
+                while i < length:
+                    if i + 2 < length and source[i] == '"' and source[i+1] == '"' and source[i+2] == '"':
+                        i += 3  # skip closing """
+                        break
+                    if source[i] == '\\' and i + 1 < length:
+                        esc = source[i + 1]
+                        if esc == 'n':
+                            s.append('\n'); i += 2
+                        elif esc == 't':
+                            s.append('\t'); i += 2
+                        elif esc == 'r':
+                            s.append('\r'); i += 2
+                        elif esc == '"':
+                            s.append('"'); i += 2
+                        elif esc == '\\':
+                            s.append('\\'); i += 2
+                        else:
+                            s.append(source[i]); i += 1
+                    else:
+                        s.append(source[i])
+                        i += 1
+                tokens.append((TOKEN_STRING, ''.join(s)))
+            else:
+                # Regular string
+                i += 1
+                s = []
+                while i < length:
+                    c = source[i]
+                    if c == '"':
+                        i += 1
+                        break
+                    if c == '\\' and i + 1 < length:
+                        esc = source[i + 1]
+                        if esc == 'n':
+                            s.append('\n'); i += 2
+                        elif esc == 't':
+                            s.append('\t'); i += 2
+                        elif esc == 'r':
+                            s.append('\r'); i += 2
+                        elif esc == '"':
+                            s.append('"'); i += 2
+                        elif esc == '\\':
+                            s.append('\\'); i += 2
+                        else:
+                            s.append(c); i += 1
                     else:
                         s.append(c)
                         i += 1
-                else:
-                    s.append(c)
-                    i += 1
-            tokens.append((TOKEN_STRING, ''.join(s)))
+                tokens.append((TOKEN_STRING, ''.join(s)))
             continue
 
         # Keywords (:keyword)
@@ -194,6 +216,12 @@ def tokenize(source: str) -> list[Token]:
 
 def _parse_number(s: str) -> Optional[int | float]:
     try:
+        if s.startswith('0x') or s.startswith('0X'):
+            return int(s, 16)
+        if s.startswith('0o') or s.startswith('0O'):
+            return int(s, 8)
+        if s.startswith('0b') or s.startswith('0B'):
+            return int(s, 2)
         if '.' in s:
             return float(s)
         return int(s)

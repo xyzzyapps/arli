@@ -1,11 +1,11 @@
-"""Tests for the Hya evaluator."""
+"""Tests for the arli evaluator."""
 
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from src.hya.eval import Evaluator
-from src.hya.types import Symbol, nil, Function, hya_repr
+from src.arli.eval import Evaluator
+from src.arli.types import Symbol, nil, Function, hya_repr
 
 
 def check(name, actual, expected):
@@ -235,7 +235,7 @@ def test_truthy_falsy():
 
 
 # Import here to avoid circular import
-from src.hya.types import is_truthy
+from src.arli.types import is_truthy
 
 
 def test_for_loop():

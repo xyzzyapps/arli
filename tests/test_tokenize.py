@@ -1,11 +1,11 @@
-"""Tests for the Hya tokenizer."""
+"""Tests for the arli tokenizer."""
 
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from src.hya.tokenize import tokenize, TOKEN_NUMBER, TOKEN_SYMBOL, TOKEN_STRING, TOKEN_OPEN, TOKEN_CLOSE
-from src.hya.tokenize import TOKEN_QUOTE, TOKEN_QUASIQUOTE, TOKEN_UNQUOTE, TOKEN_UNQUOTE_SPLICE
+from src.arli.tokenize import tokenize, TOKEN_NUMBER, TOKEN_SYMBOL, TOKEN_STRING, TOKEN_OPEN, TOKEN_CLOSE
+from src.arli.tokenize import TOKEN_QUOTE, TOKEN_QUASIQUOTE, TOKEN_UNQUOTE, TOKEN_UNQUOTE_SPLICE
 
 
 def test_numbers():

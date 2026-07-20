@@ -1,4 +1,4 @@
-"""Environment for Hya — maps symbols to values."""
+"""Environment for arli — maps symbols to values."""
 
 from __future__ import annotations
 from typing import Any, Optional
@@ -7,7 +7,7 @@ from .types import Symbol
 
 
 class Environment:
-    """A nested scope environment for Hya.
+    """A nested scope environment for arli.
 
     Supports:
     - Variable definition and lookup

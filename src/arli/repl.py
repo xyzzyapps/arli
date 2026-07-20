@@ -1,4 +1,4 @@
-"""Interactive REPL for Hya.
+"""Interactive REPL for arli.
 
 Provides a Read-Eval-Print Loop with:
 - Full arity-driven parsing
@@ -15,7 +15,7 @@ from .types import hya_repr
 
 
 class REPL:
-    """Interactive Hya REPL."""
+    """Interactive arli REPL."""
 
     def __init__(self, evaluator: Optional[Evaluator] = None,
                  debug: bool = False) -> None:
@@ -32,7 +32,7 @@ class REPL:
         except ImportError:
             pass
 
-        print(f"Hya v{__import__('hya').__version__}")
+        print(f"arli v{__import__('arli').__version__}")
         print("Arity-driven Lisp with Forth-like stack operations")
         print("Type 'help' for commands, 'exit' or Ctrl+C to quit")
         print()
@@ -81,7 +81,7 @@ class REPL:
 
         # Read first line
         try:
-            line = input("hya> ")
+            line = input("arli> ")
         except EOFError:
             return None
 
@@ -126,7 +126,7 @@ class REPL:
         return False
 
     def _eval_line(self, line: str) -> None:
-        """Parse and evaluate a single line of Hya code."""
+        """Parse and evaluate a single line of arli code."""
         self.history.append(line)
 
         # Try to parse and evaluate
@@ -208,7 +208,7 @@ class REPL:
 
     def _show_help(self) -> None:
         """Display help."""
-        print("Hya — Arity-driven Forth-like Lisp")
+        print("arli — Arity-driven Forth-like Lisp")
         print()
         print("Basic syntax:")
         print("  + 1 2          ; arity-driven, no parens needed")

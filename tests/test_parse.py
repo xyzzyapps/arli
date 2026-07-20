@@ -1,11 +1,11 @@
-"""Tests for the Hya arity-driven parser."""
+"""Tests for the arli arity-driven parser."""
 
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from src.hya.parse import Parser, ArityTable, parse_source
-from src.hya.types import Symbol
+from src.arli.parse import Parser, ArityTable, parse_source
+from src.arli.types import Symbol
 
 
 def test_arity_known():

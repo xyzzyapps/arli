@@ -1,4 +1,4 @@
-"""Arity-driven parser for Hya.
+"""Arity-driven parser for arli.
 
 The parser uses function arities to eliminate parentheses.
 
@@ -302,10 +302,10 @@ class Parser:
 def parse_source(source: str,
                  arity_table: Optional[ArityTable] = None
                  ) -> list[Any]:
-    """Parse Hya source code.
+    """Parse arli source code.
 
     Args:
-        source: Hya source string.
+        source: arli source string.
         arity_table: Optional custom arity table.
 
     Returns:

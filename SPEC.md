@@ -1,6 +1,6 @@
-# Hya Language Specification
+# arli Language Specification
 
-**Hya** (Hy + Arity) is a stack-based Lisp dialect that eliminates parentheses through arity-driven parsing. It combines ideas from Forth (stack-based evaluation, concatenative operations) with Lisp (symbolic expressions, functional programming, Python interop).
+**arli** (Hy + Arity) is a stack-based Lisp dialect that eliminates parentheses through arity-driven parsing. It combines ideas from Forth (stack-based evaluation, concatenative operations) with Lisp (symbolic expressions, functional programming, Python interop).
 
 ## Architecture Overview
 
@@ -205,7 +205,7 @@ result = eval_body(fn.body, call_env)
 
 ## Evaluation & Parsing Interleaving
 
-Hya uses **interleaved parse-eval** execution. Each top-level expression is parsed and evaluated before the next expression is parsed. This ensures that arity registrations from `defn`/`define` take effect for immediately following expressions.
+arli uses **interleaved parse-eval** execution. Each top-level expression is parsed and evaluated before the next expression is parsed. This ensures that arity registrations from `defn`/`define` take effect for immediately following expressions.
 
 ```
 For source: (defn add (x y) (+ x y))
@@ -219,7 +219,7 @@ Step 4: Evaluate -> 3
 
 ## File Format
 
-Hya source files use the `.hya` extension. Files can contain multiple expressions separated by whitespace or newlines.
+arli source files use the `.arli` extension. Files can contain multiple expressions separated by whitespace or newlines.
 
 ### Example: Fibonacci
 ```clojure
@@ -255,7 +255,7 @@ over 1 2        ;; over: (1 2) -> (1 2 1)
 
 ## Future Directions
 
-1. **Python Interop**: Compile Hya to Python AST (like Hy)
+1. **Python Interop**: Compile arli to Python AST (like Hy)
 2. **Macros**: Lisp-style macro system using arity-based syntax
 3. **Tail Call Optimization**: For recursive functions
 4. **Pattern Matching**: Destructuring on function parameters

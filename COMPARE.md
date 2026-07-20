@@ -1,10 +1,10 @@
-# Hya Compared: What's There, What's Missing
+# arli Compared: What's There, What's Missing
 
 ## The Design Philosophy
 
 Before the comparison, let's state the principle explicitly:
 
-> Hya's core is intentionally minimal. Everything beyond basic control flow and
+> arli's core is intentionally minimal. Everything beyond basic control flow and
 > data comes from the **base language** (Python, and eventually Go/C).
 > Syntax sugar belongs in libraries and macros, not in the core.
 
@@ -18,7 +18,7 @@ This means "missing" features fall into three categories:
 
 ## Comparison Matrix
 
-| Feature | Clojure | HyLang | Janet | Hya | Verdict |
+| Feature | Clojure | HyLang | Janet | arli | Verdict |
 |---------|---------|--------|-------|-----|---------|
 | **Arity-driven syntax** | No | No | No | **Yes** | Unique strength |
 | **Stack evaluation** | No | No | No | **Yes** | Unique strength |
@@ -27,7 +27,7 @@ This means "missing" features fall into three categories:
 
 ### Control Flow
 
-| Feature | Clojure | HyLang | Janet | Hya | Verdict |
+| Feature | Clojure | HyLang | Janet | arli | Verdict |
 |---------|---------|--------|-------|-----|---------|
 | if / cond / when | Yes | Yes | Yes | **Yes** | Present |
 | let / binding | Yes | Yes | Yes | **Yes** | Present |
@@ -37,7 +37,7 @@ This means "missing" features fall into three categories:
 
 ### Data & Sequences
 
-| Feature | Clojure | HyLang | Janet | Hya | Verdict |
+| Feature | Clojure | HyLang | Janet | arli | Verdict |
 |---------|---------|--------|-------|-----|---------|
 | nil / false / true | Yes | Yes | Yes | **Yes** | Present |
 | cons / car / cdr / list | Yes | Yes | Yes | **Yes** | Present |
@@ -51,7 +51,7 @@ This means "missing" features fall into three categories:
 
 ### Functions
 
-| Feature | Clojure | HyLang | Janet | Hya | Verdict |
+| Feature | Clojure | HyLang | Janet | arli | Verdict |
 |---------|---------|--------|-------|-----|---------|
 | fn / defn / closures | Yes | Yes | Yes | **Yes** | Present |
 | Arity overloading | Yes | Yes | Yes | **No** | Base language |
@@ -60,7 +60,7 @@ This means "missing" features fall into three categories:
 
 ### Error Handling
 
-| Feature | Clojure | HyLang | Janet | Hya | Verdict |
+| Feature | Clojure | HyLang | Janet | arli | Verdict |
 |---------|---------|--------|-------|-----|---------|
 | **try / catch / finally** | Yes | Yes | Yes | **No** | **CORE GAP** |
 | Stack traces | Yes | Yes | Yes | partial | Python traces |
@@ -68,7 +68,7 @@ This means "missing" features fall into three categories:
 
 ### Module System
 
-| Feature | Clojure | HyLang | Janet | Hya | Verdict |
+| Feature | Clojure | HyLang | Janet | arli | Verdict |
 |---------|---------|--------|-------|-----|---------|
 | require / import | Yes | Yes | Yes | **import** | Python's is fine |
 | Namespaces | Yes | Yes | Yes | **global env** | Minimal |
@@ -76,7 +76,7 @@ This means "missing" features fall into three categories:
 
 ### I/O
 
-| Feature | Clojure | HyLang | Janet | Hya | Verdict |
+| Feature | Clojure | HyLang | Janet | arli | Verdict |
 |---------|---------|--------|-------|-----|---------|
 | print / read | Yes | Yes | Yes | **print** | Python has everything |
 | File I/O | Yes | Yes | Yes | **No** | `python "open(...)"` |
@@ -84,7 +84,7 @@ This means "missing" features fall into three categories:
 
 ### Concurrency
 
-| Feature | Clojure | HyLang | Janet | Hya | Verdict |
+| Feature | Clojure | HyLang | Janet | arli | Verdict |
 |---------|---------|--------|-------|-----|---------|
 | Threads | Yes | Yes | Yes | **No** | Python threading |
 | Async/await | libraries | libraries | **built-in fibers** | **No** | `python "asyncio..."` |
@@ -92,7 +92,7 @@ This means "missing" features fall into three categories:
 
 ### Reflection & Meta
 
-| Feature | Clojure | HyLang | Janet | Hya | Verdict |
+| Feature | Clojure | HyLang | Janet | arli | Verdict |
 |---------|---------|--------|-------|-----|---------|
 | **Macros** | Yes | Yes | Yes | **No** | **Design decision** |
 | Eval / read | Yes | Yes | Yes | **python** | Python's eval |
@@ -106,7 +106,7 @@ This means "missing" features fall into three categories:
 
 This is the single biggest missing piece. Every language needs to handle errors.
 Without it, a Python exception from an imported library will crash the entire
-Hya program with no way to recover.
+arli program with no way to recover.
 
 **Should be core** because it's backend-independent and every evaluator needs it.
 
@@ -120,8 +120,8 @@ error as argument. Or arity 3 for try/catch/finally.
 
 ### 2. DESIGN DECISION: Macros
 
-Hya doesn't have macros. This is intentional — macros require a separate
-compile phase, which conflicts with Hya's interleaved parse-eval model
+arli doesn't have macros. This is intentional — macros require a separate
+compile phase, which conflicts with arli's interleaved parse-eval model
 (where each expression is parsed and evaluated immediately).
 
 However, you can achieve similar things via:
@@ -130,7 +130,7 @@ However, you can achieve similar things via:
 - **The `python` special form**: evaluate arbitrary code at compile time
 - **The `.` operator**: chain Python functions freely
 
-For example, a threading macro equivalent in Hya:
+For example, a threading macro equivalent in arli:
 
 ```clojure
 ;; Instead of (-> x (f 1) (g 2))
@@ -144,7 +144,7 @@ g f x 1 2
 ```
 
 Actually, arity-driven syntax already solves one of the main problems that
-threading macros solve: deep nesting. You rarely need `->` in Hya because
+threading macros solve: deep nesting. You rarely need `->` in arli because
 there's no deeply nested parentheses to read inside-out.
 
 ### 3. NICE-TO-HAVE: Destructuring
@@ -173,11 +173,11 @@ it when `python "[1, 2, 3]"` works? That's a philosophy call.
 
 ---
 
-## What's Unique About Hya
+## What's Unique About arli
 
 Nothing else has this combination:
 
-| Feature | Only Hya |
+| Feature | Only arli |
 |---------|----------|
 | **Arity-driven syntax** | Eliminates parentheses for ALL known-arity functions |
 | **Stack evaluation** | Forth-like explicit data stack |

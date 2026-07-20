@@ -1,4 +1,4 @@
-"""Stack-based evaluator for Hya.
+"""Stack-based evaluator for arli.
 
 Evaluation model (Forth-like + Lisp):
 1. Expressions are evaluated left-to-right, top-down
@@ -25,7 +25,7 @@ from .builtins import get_builtins
 # ---------------------------------------------------------------------------
 
 class Evaluator:
-    """Stack-based Hya evaluator.
+    """Stack-based arli evaluator.
 
     The evaluator walks an AST (nested Python lists produced by the parser)
     and evaluates it left-to-right.
@@ -460,14 +460,14 @@ class Evaluator:
             self.env = old_env
 
     def exec(self, source: str) -> Any:
-        """Parse and evaluate Hya source code.
+        """Parse and evaluate arli source code.
 
         Expressions are parsed and evaluated ONE AT A TIME so that
         arity registrations from `defn`/`define` take effect for
         subsequent expressions in the same source text.
 
         Args:
-            source: Hya source string.
+            source: arli source string.
 
         Returns:
             Result of the last expression.
@@ -484,7 +484,7 @@ class Evaluator:
         return result
 
     def exec_file(self, path: str) -> Any:
-        """Load and execute a .hya file."""
+        """Load and execute a .arli file."""
         with open(path, 'r', encoding='utf-8') as f:
             source = f.read()
         return self.exec(source)

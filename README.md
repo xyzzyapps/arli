@@ -1,12 +1,12 @@
-# Hya
+# arli
 
-**Hya** (Hy + Arity) is a Forth-like Lisp dialect that eliminates parentheses through arity-driven parsing. If the number of arguments a function takes is known, you don't need parentheses. When arity is unknown, use parentheses as usual.
+**arli** (Hy + Arity) is a Forth-like Lisp dialect that eliminates parentheses through arity-driven parsing. If the number of arguments a function takes is known, you don't need parentheses. When arity is unknown, use parentheses as usual.
 
 ## Quick Example
 
 ```clojure
 ;; Traditional Lisp: (+ 1 (* 2 3))
-;; Hya (arity-driven, no parens):
+;; arli (arity-driven, no parens):
 + 1 * 2 3         ;; => 7
 
 ;; Define a function
@@ -36,7 +36,7 @@ print fib 10      ;; prints 55
 
 ```bash
 git clone <repo-url>
-cd hya
+cd arli
 pip install -e .
 ```
 
@@ -44,17 +44,17 @@ pip install -e .
 
 ### REPL
 ```bash
-python -m hya
+python -m arli
 ```
 
 ### Run a file
 ```bash
-python -m hya examples/fizzbuzz.hya
+python -m arli examples/fizzbuzz.arli
 ```
 
 ### Evaluate an expression
 ```bash
-python -m hya -e "+ 1 2"
+python -m arli -e "+ 1 2"
 ```
 
 ## Syntax Guide

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Common test runner for Hya — runs .hya test files and verifies outputs.
+"""Common test runner for arli — runs .arli test files and verifies outputs.
 
 Usage:
     python tests/run_tests.py              # test Python backend
@@ -17,7 +17,7 @@ import glob
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 TEST_DIR = os.path.join(os.path.dirname(__file__), 'common')
-GO_BINARY = os.path.join(os.path.dirname(__file__), '..', 'go', 'hya', 'hya.exe')
+GO_BINARY = os.path.join(os.path.dirname(__file__), '..', 'go', 'arli', 'arli.exe')
 
 
 # ---------------------------------------------------------------------------
@@ -50,9 +50,9 @@ def parse_expected(filepath):
 # ---------------------------------------------------------------------------
 
 def run_python(filepath):
-    """Run a .hya file with the Python backend, return output lines."""
-    from hya.eval import Evaluator
-    from hya.types import hya_repr, nil
+    """Run a .arli file with the Python backend, return output lines."""
+    from arli.eval import Evaluator
+    from arli.types import hya_repr, nil
 
     ev = Evaluator()
     source = open(filepath, 'r', encoding='utf-8').read()
@@ -63,8 +63,8 @@ def run_python(filepath):
 
     output = []
     tokens = None
-    from hya.tokenize import tokenize
-    from hya.parse import TokenStream
+    from arli.tokenize import tokenize
+    from arli.parse import TokenStream
 
     tokens = tokenize(source)
     stream = TokenStream(tokens)
@@ -82,7 +82,7 @@ def run_python(filepath):
 # ---------------------------------------------------------------------------
 
 def run_go(filepath, go_binary=GO_BINARY):
-    """Run a .hya file with the Go backend, return output lines."""
+    """Run a .arli file with the Go backend, return output lines."""
     if not os.path.exists(go_binary):
         return None  # Go binary not available
 
@@ -148,7 +148,7 @@ def run_test(name, filepath, use_go=False, go_binary=GO_BINARY):
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description='Run Hya common tests')
+    parser = argparse.ArgumentParser(description='Run arli common tests')
     parser.add_argument('--go', nargs='?', const=GO_BINARY, default=None,
                         help='Test Go backend (optional path to binary)')
     parser.add_argument('--python', action='store_true',

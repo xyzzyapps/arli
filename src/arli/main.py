@@ -1,9 +1,9 @@
-"""CLI entry point for Hya.
+"""CLI entry point for arli.
 
 Usage:
-    python -m hya              # Start REPL
-    python -m hya file.hya     # Run a script
-    python -m hya -d file.hya  # Run with debug
+    python -m arli              # Start REPL
+    python -m arli file.arli     # Run a script
+    python -m arli -d file.arli  # Run with debug
 """
 
 from __future__ import annotations
@@ -17,8 +17,8 @@ from .types import hya_repr
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Hya — Arity-driven Forth-like Lisp")
-    parser.add_argument("files", nargs="*", help=".hya files to execute")
+        description="arli — Arity-driven Forth-like Lisp")
+    parser.add_argument("files", nargs="*", help=".arli files to execute")
     parser.add_argument("-d", "--debug", action="store_true",
                         help="Enable debug output")
     parser.add_argument("-e", "--eval", type=str,

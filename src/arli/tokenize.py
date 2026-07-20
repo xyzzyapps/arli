@@ -1,4 +1,4 @@
-"""Tokenizer for Hya.
+"""Tokenizer for arli.
 
 Converts source text into a flat list of tokens.
 Tokens are: numbers, strings, symbols, and punctuation ().
@@ -29,7 +29,7 @@ Token = tuple[str, str | int | float]  # (type, value)
 # ---------------------------------------------------------------------------
 
 def tokenize(source: str) -> list[Token]:
-    """Tokenize Hya source code into a list of tokens.
+    """Tokenize arli source code into a list of tokens.
 
     Handles:
     - integers and floats (including negative via '-')

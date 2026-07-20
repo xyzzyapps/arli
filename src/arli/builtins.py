@@ -1,4 +1,4 @@
-"""Built-in functions for Hya.
+"""Built-in functions for arli.
 
 Each builtin has a known arity. Arity -1 means 'unknown/variadic' and
 requires parentheses in source.

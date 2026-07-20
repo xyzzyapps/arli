@@ -1,6 +1,6 @@
-"""Core data types for Hya.
+"""Core data types for arli.
 
-Hya's type system is minimal:
+arli's type system is minimal:
 - Numbers (int, float)
 - Strings
 - Symbols
@@ -15,7 +15,7 @@ from typing import Any, Optional
 
 
 class HyaType:
-    """Base type for all Hya runtime objects."""
+    """Base type for all arli runtime objects."""
     pass
 
 
@@ -103,7 +103,7 @@ def is_truthy(val: Any) -> bool:
 
 
 def hya_repr(val: Any) -> str:
-    """Convert a Hya value to its string representation."""
+    """Convert a arli value to its string representation."""
     if val is nil:
         return "nil"
     if isinstance(val, Symbol):

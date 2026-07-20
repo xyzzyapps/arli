@@ -74,15 +74,24 @@ class Evaluator:
         self.arity_table.register("for", 3)      # for var list body
         self.arity_table.register("cond", 1)     # cond clauses-list
         self.arity_table.register("defn", 3)     # defn name (params) body
+        self.arity_table.register("defn-rec", 3) # defn-rec name (params) body
         self.arity_table.register("fn", 2)       # fn (params) body
         self.arity_table.register("import", 1)   # import module-name
         self.arity_table.register("import!", 2)  # import! module alias
         self.arity_table.register(".", 2)        # . obj attr
         self.arity_table.register("python", 1)   # python "code"
         self.arity_table.register("assert", 2)     # assert expr message
-        self.arity_table.register("doc", 2)        # doc symbol "text"
+        self.arity_table.register("doc", 1)        # doc symbol (retrieve)
+        self.arity_table.register("doc!", 2)       # doc! symbol "text" (store)
         self.arity_table.register("match", -1)     # match expr clause...
         self.arity_table.register("import-module", 1)  # import-module "path"
+        self.arity_table.register("defn-fexpr", 3)     # defn-fexpr name (params) body
+        self.arity_table.register("eval", 1)           # eval form
+
+    def eval_form(self, form: Any) -> Any:
+        """Evaluate a raw form in the current environment.
+        Public wrapper around _eval_expr for the eval builtin and fexpr use."""
+        return self._eval_expr(form)
 
     def eval(self, expr: Any) -> Any:
         """Evaluate a single expression and return the result.
@@ -94,7 +103,6 @@ class Evaluator:
         if result is not None:
             self.stack.append(result)
         return result
-
     def _eval_expr(self, expr: Any) -> Any:
         """Internal recursive evaluation of a single expression."""
         if self.debug:
@@ -431,23 +439,24 @@ class Evaluator:
                     raise AssertionError(f"Assertion failed: {hya_repr(msg)}")
                 return val
 
-            # DOC: (doc symbol) or (doc symbol "text")
+            # DOC: (doc symbol) — retrieve documentation
             if isinstance(head, Symbol) and head.name == "doc":
-                if len(expr) >= 3:
-                    # Storing doc
-                    sym = expr[1]
-                    doc_text = self._eval_expr(expr[2])
-                    if isinstance(sym, Symbol):
-                        self.env.define(f"__doc_{sym.name}", doc_text)
-                        return doc_text
-                elif len(expr) >= 2:
-                    # Retrieving doc
+                if len(expr) >= 2:
                     sym = expr[1]
                     if isinstance(sym, Symbol):
                         doc_val = self.env.lookup(f"__doc_{sym.name}")
                         if doc_val is not None:
                             return doc_val
-                    return nil
+                return nil
+
+            # DOC!: (doc! symbol "text") — store documentation
+            if isinstance(head, Symbol) and head.name == "doc!":
+                if len(expr) >= 3:
+                    sym = expr[1]
+                    doc_text = self._eval_expr(expr[2])
+                    if isinstance(sym, Symbol):
+                        self.env.define(f"__doc_{sym.name}", doc_text)
+                        return doc_text
                 return nil
 
             # MATCH: (match expr clause...)
@@ -470,12 +479,10 @@ class Evaluator:
                 path = self._eval_expr(expr[1])
                 if isinstance(path, str):
                     import os
-                    full_path = path
+                    full_path = os.path.abspath(path)
                     if not os.path.exists(full_path):
-                        full_path = os.path.join(os.path.dirname(os.path.abspath('.')), path)
-                    if os.path.exists(full_path):
-                        return self.exec_file(full_path)
-                    raise FileNotFoundError(f"Cannot find module: {path}")
+                        raise FileNotFoundError(f"Cannot find module: {path}")
+                    return self.exec_file(full_path)
                 raise TypeError(f"import-module expects a string path")
 
             # ---- Generic function application ----
@@ -493,8 +500,34 @@ class Evaluator:
                 self.arity_table.register(name_sym.name, len(params))
                 return fn
 
+            if isinstance(head, Symbol) and head.name == "defn-fexpr":
+                # Define an f-expression (doesn't evaluate its arguments)
+                if len(expr) < 4:
+                    raise SyntaxError(
+                        "defn-fexpr expects (defn-fexpr name (params) body...)")
+                name_sym = expr[1]
+                params = expr[2]
+                body = expr[3:]
+                if not isinstance(name_sym, Symbol):
+                    raise SyntaxError(
+                        f"defn-fexpr expects a symbol name, got {name_sym}")
+                if not isinstance(params, list):
+                    raise SyntaxError(
+                        "defn-fexpr expects a parameter list")
+                fn = Function(params, body, self.env, name_sym.name,
+                              is_fexpr=True)
+                self.env.define(name_sym.name, fn)
+                self.arity_table.register(name_sym.name, len(params))
+                return fn
+
             # Generic function call
             fn_val = self._eval_expr(head)
+
+            # For fexprs, pass raw (unevaluated) argument forms
+            if isinstance(fn_val, Function) and fn_val.is_fexpr:
+                args = list(expr[1:])
+                return self._apply_function(fn_val, args)
+
             args = [self._eval_expr(arg) for arg in expr[1:]]
 
             if isinstance(fn_val, Builtin):
@@ -502,7 +535,6 @@ class Evaluator:
 
             if isinstance(fn_val, Function):
                 return self._apply_function(fn_val, args)
-
             if callable(fn_val):
                 return fn_val(*args)
 

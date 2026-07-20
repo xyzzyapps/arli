@@ -34,6 +34,7 @@ This means "missing" features fall into three categories:
 | loop / recur | Yes | loop | loop | **for / while** | TCO missing |
 | **try / catch / throw** | Yes | Yes | Yes | **No** | **CORE GAP** |
 | Threading macros (->, ->>) | Yes | Yes | Yes | **No** | Macro territory |
+| **F-expressions** | No | No | No | **Yes** | **Unique: user-defined lazy eval** |
 
 ### Data & Sequences
 
@@ -181,7 +182,7 @@ Nothing else has this combination:
 |---------|----------|
 | **Arity-driven syntax** | Eliminates parentheses for ALL known-arity functions |
 | **Stack evaluation** | Forth-like explicit data stack |
-
+| **F-expressions** | User-defined functions with lazy evaluation of arguments |
 These two features together create a language that reads differently from
 anything else. Code is flat, not nested. Data flows through the stack rather
 than through nested expressions. The arity table replaces the paren-matching

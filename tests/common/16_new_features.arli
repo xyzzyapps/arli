@@ -1,0 +1,56 @@
+;; New features: hex/octal/bin numbers, Result type, set! enhancement
+;;
+;; test: hex 0xFF
+0xFF
+;; expect: 255
+
+;; test: hex 0x1A
+0x1A
+;; expect: 26
+
+;; test: octal 0o77
+0o77
+;; expect: 63
+
+;; test: binary 0b1010
+0b1010
+;; expect: 10
+
+;; test: binary 0b1111
+0b1111
+;; expect: 15
+
+;; test: Result type Ok
+(Ok 42)
+;; expect: (Ok 42)
+
+;; test: Result type Err
+(Err "oops")
+;; expect: (Err "oops")
+
+;; test: map-ok transforms Ok value
+define r1 (Ok 10)
+;; expect: (Ok 10)
+(map-ok r1 (fn (x) * x 2))
+;; expect: (Ok 20)
+
+;; test: and-then chains Ok
+(and-then (Ok 5) (fn (x) (Ok + x 1)))
+;; expect: (Ok 6)
+
+;; test: and-then passes through Err
+(and-then (Err "fail") (fn (x) (Ok + x 1)))
+;; expect: (Err "fail")
+
+;; test: or-else passes through Ok
+(and-then (Ok 42) (fn (x) (Ok x)))
+;; expect: (Ok 42)
+
+;; test: set! on map
+define m {:a 1 :b 2}
+;; expect: {':a': 1, ':b': 2}
+(set! m :a 99)
+;; expect: 99
+m
+;; expect: {':a': 99, ':b': 2}
+

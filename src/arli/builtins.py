@@ -169,7 +169,7 @@ def _tuck(a, b, evaluator=None):
         evaluator.stack.append(b)
         evaluator.stack.append(a)
         evaluator.stack.append(b)
-    return b, a, b
+    return b  # return the new top of stack
 
 
 # ---------------------------------------------------------------------------
@@ -304,6 +304,33 @@ def get_builtins() -> dict[str, Builtin]:
     reg("nip", _nip, 2)
     reg("tuck", _tuck, 2)
 
+    # Stack shorthand: pick and roll
+    def _pick(n, evaluator=None):
+        """Copy nth element (0=top) to the top. pick 0 = dup, pick 1 = over."""
+        if evaluator is not None and isinstance(n, (int, float)):
+            idx = int(n)
+            stack_len = len(evaluator.stack)
+            if 0 <= idx < stack_len:
+                source_idx = stack_len - 1 - idx
+                val = evaluator.stack[source_idx]
+                evaluator.stack.append(val)
+                return val
+        return n
+    reg("pick", _pick, 1)
+
+    def _roll(n, evaluator=None):
+        """Rotate nth element (0=top) to the top. roll 1 = swap, roll 2 = rot."""
+        if evaluator is not None and isinstance(n, (int, float)):
+            depth = int(n)
+            stack_len = len(evaluator.stack)
+            if 0 <= depth < stack_len:
+                roll_idx = stack_len - 1 - depth
+                val = evaluator.stack.pop(roll_idx)
+                evaluator.stack.append(val)
+                return val
+        return n
+    reg("roll", _roll, 1)
+
     # List operations
     reg("cons", _cons, 2)
     reg("car", _car, 1)
@@ -396,5 +423,14 @@ def get_builtins() -> dict[str, Builtin]:
     reg("string?", _is_string, 1)
     reg("symbol?", _is_symbol, 1)
     reg("fn?", _is_fn, 1)
+
+    # Evaluation control
+    def _eval_form(form, evaluator=None):
+        """Evaluate a form in the current environment.
+        Used by f-expressions to selectively evaluate arguments."""
+        if evaluator is None:
+            return form
+        return evaluator.eval_form(form)
+    reg("eval", _eval_form, 1)
 
     return b

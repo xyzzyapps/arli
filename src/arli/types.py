@@ -86,16 +86,18 @@ class Function(HyaType):
     """A user-defined closure with known arity."""
 
     def __init__(self, params: list[Symbol], body: Any,
-                 env: dict, name: str = "") -> None:
+                 env: dict, name: str = "",
+                 is_fexpr: bool = False) -> None:
         self.params = params
         self.body = body
         self.env = env  # closure environment
         self.name = name
         self.arity = len(params)
+        self.is_fexpr = is_fexpr  # f-expressions don't evaluate args
 
     def __repr__(self) -> str:
-        return f"<Function {self.name or 'anon'} arity={self.arity}>"
-
+        kind = "fexpr" if self.is_fexpr else "fn"
+        return f"<{kind} {self.name or 'anon'} arity={self.arity}>"
 
 def is_truthy(val: Any) -> bool:
     """Check truthiness. Only nil is false."""

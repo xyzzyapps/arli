@@ -191,11 +191,11 @@ class Parser:
         name_sym = self._parse_name_sym(stream)
         param_syms = self._parse_params_list(stream)
         self.arity_table.register(name_sym.name, len(param_syms))
+        # Parse one body expression (like defn arity 3). Multiple expressions
+        # use (do ...) — consistent with defn at top level.
         body: list[Any] = []
-        while True:
-            tok = stream.peek()
-            if tok is None or tok[0] in (TOKEN_CLOSE, TOKEN_VECTOR_CLOSE, TOKEN_MAP_CLOSE):
-                break
+        tok = stream.peek()
+        if tok is not None and tok[0] not in (TOKEN_CLOSE, TOKEN_VECTOR_CLOSE, TOKEN_MAP_CLOSE):
             expr = self._parse_expr(stream, True)
             if expr is not None:
                 body.append(expr)

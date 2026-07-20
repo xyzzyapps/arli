@@ -88,8 +88,39 @@ This is the complete syntax of arli:
 2. If a function's arity is **unknown** (variadic), use parentheses: `(list 1 2 3)`
 3. If you want to be explicit, use parentheses anywhere: `(+ 1 2)` is the same as `+ 1 2`
 
-**Unicode symbols** are fully supported as function and variable names — Greek letters, Cyrillic, Chinese characters, even math symbols:
+**All** of arli's core operators and special forms have known arities (>= 0) and can be used without parentheses:
 
+| Operator | Arity | No-parens example |
+|----------|-------|--------------------|
+| `if` | 3 | `if cond "yes" "no"` |
+| `define` | 2 | `define x 42` |
+| `defn` | 3 | `defn add (x y) + x y` |
+| `fn` | 2 | `fn (x) * x 2` |
+| `while` | 2 | `while cond body` |
+| `for` | 3 | `for x list print x` |
+| `let` | 2 | `let ((x 1)) + x 1` |
+| `set!` | 2 | `set! x 42` |
+| `cond` | 1 | `cond ((> x 0) "pos")` |
+| `quote` | 1 | `quote + 1 2` |
+| `import` | 1 | `import os` |
+| `.` | 2 | `. os sep` |
+| `python` | 1 | `python "repr(42)"` |
+
+The only forms that **do** require parentheses are variadic ones (arity -1) and `defn-rec` (which needs special handling for recursion):
+
+| Operator | Arity | Example |
+|----------|-------|---------|
+| `do` | -1 | `(do a b c)` |
+| `list` | -1 | `(list 1 2 3)` |
+| `match` | -1 | `(match val ...)` |
+| `and` | -1 | `(and a b c)` |
+| `or` | -1 | `(or a b c)` |
+| `hash-map` | -1 | `(hash-map :a 1)` |
+| `defn-rec` | -1 | `(defn-rec fact (n) ...)` |
+
+And `defn-rec` specifically requires parentheses because it must register the function's arity **before** parsing the body, which requires a special parser handler that only activates inside parens.
+
+**Unicode symbols** are fully supported as function and variable names — Greek letters, Cyrillic, Chinese characters, even math symbols:
 ```
 arli> define π 3.14159
 3.14159
@@ -448,6 +479,19 @@ arli> define mydir . p join "home" "user"
 "home\\user"
 ```
 
+#### import!: Import with an Alias
+
+Sometimes you want to import a module under a different name to avoid conflicts. `import!` has arity 2:
+
+```
+arli> import! os myos
+<module 'os' from '...'>
+arli> . myos sep
+"\\"
+```
+
+This imports the Python `os` module but binds it to `myos` instead of `os`.
+
 #### The python Special Form
 
 For arbitrary Python evaluation, use `python` with arity 1:
@@ -566,6 +610,47 @@ arli> doc add
 "Adds two numbers together"
 ```
 
+#### Numbers: Hex, Octal, Binary
+
+```
+arli> 0xFF
+255
+arli> 0o77
+63
+arli> 0b1010
+10
+```
+
+#### Triple-Quoted Strings
+
+```
+arli> """hello
+... world"""
+"hello\nworld"
+```
+
+#### Result Type (Ok / Err)
+
+The `Ok` and `Err` constructors create tagged values for error handling:
+
+```
+arli> define result (Ok 42)
+(Ok 42)
+arli> match result (Ok val) (print "got:" val) (Err msg) (print "error:" msg)
+got: 42
+```
+
+Chain operations with `map-ok`, `and-then`, `or-else`:
+
+```
+arli> map-ok (Ok 10) (fn (x) * x 2)
+(Ok 20)
+arli> and-then (Ok 5) (fn (x) (Ok + x 1))
+(Ok 6)
+arli> and-then (Err "fail") (fn (x) (Ok + x 1))
+(Err fail)
+```
+
 #### Testing with `assert`
 
 Verify conditions inline:
@@ -579,7 +664,144 @@ Error: Assertion failed: "this fails"
 
 ---
 
-### Chapter 7: Using Go From arli
+### Chapter 7: F-Expressions — Functions That Don't Evaluate
+
+Every function you've seen so far evaluates its arguments eagerly. When you write `+ 1 2`, both `1` and `2` are computed before `+` sees them. That's normally what you want.
+
+But what if you want to write your own `if`? Or your own `while`? Or a logging wrapper that inspects expressions without evaluating them?
+
+In most languages, you can't — control structures are built into the language. But arli gives you **f-expressions** (fexprs): user-defined functions that receive their arguments **unevaluated**.
+
+#### defn-fexpr: Creating an F-Expression
+
+`defn-fexpr` has arity 3, just like `defn`:
+
+```
+arli> defn-fexpr my-if (c t e) ...
+```
+
+The body receives `c`, `t`, and `e` as raw, unevaluated forms (AST nodes). To evaluate them, use the `eval` builtin:
+
+```
+arli> defn-fexpr my-if (c t e)
+...   if (eval c) (eval t) (eval e)
+<fexpr my-if arity=3>
+
+arli> my-if true "yes" "no"
+"yes"
+
+arli> my-if false "yes" "no"
+"no"
+```
+
+No parentheses needed — `my-if` has arity 3, just like `if`. The difference is that `if` is built into the language, while `my-if` is defined entirely in arli code.
+
+#### Why This Matters: Short-Circuit Evaluation
+
+With normal functions, all arguments are evaluated before the call. This means you can't write a short-circuit `or`:
+
+```
+arli> define side-effect (fn (x) (do print "computing..." x))
+<fn side-effect arity=1>
+
+arli> or true side-effect 42   ;; side-effect 42 is still evaluated!
+"computing..."
+true
+```
+
+With an fexpr, you control evaluation:
+
+```
+arli> defn-fexpr short-or (a b)
+...   let ((av (eval a)))
+...       if av av (eval b)
+<fexpr short-or arity=2>
+
+arli> short-or true (side-effect 42)
+true                       ;; no "computing..." — side-effect was never called
+
+arli> short-or false (side-effect 42)
+"computing..."
+42                         ;; only evaluates the second argument when needed
+```
+
+This is how Lisp macros work, but fexprs are **runtime** — no compile-time macro expansion step needed.
+
+#### Inspecting Raw Forms
+
+Since fexprs receive unevaluated arguments, you can inspect the AST of the caller's code:
+
+```
+arli> defn-fexpr show (x) x
+<fexpr show arity=1>
+
+arli> show + 1 * 2 3
+(+ 1 (* 2 3))
+```
+
+This returns the expression `+ 1 * 2 3` as a data structure, not the computed value `7`. You can examine the structure, transform it, or conditionally evaluate parts of it.
+
+#### Multiple Body Expressions
+
+Like `defn`, the body of `defn-fexpr` is a single expression. Use `(do ...)` for multiple:
+
+```
+arli> defn-fexpr log-if (c t e)
+...   (do
+...       print "condition:" c
+...       print "evaluated:" (eval c)
+...       if (eval c) (eval t) (eval e))
+<fexpr log-if arity=3>
+
+arli> log-if true "yes" "no"
+"condition:" true
+"evaluated:" true
+"yes"
+```
+
+#### The eval Builtin
+
+`eval` has arity 1 and evaluates a form in the current environment. You can use it outside fexprs too:
+
+```
+arli> define expr (quote + 1 2)
+(+ 1 2)
+
+arli> eval expr
+3
+```
+
+In fexprs, `eval` is how you selectively evaluate arguments. An argument you don't `eval` stays as a raw form — you can pass it around, inspect it, or discard it.
+
+#### Important Caveats
+
+**1. Name conflicts**: Parameter names must not match registered operator names. If you name a parameter `cond` (arity 1), the parser will try to consume an argument after it:
+
+```
+;; BAD — 'cond' has arity 1, parser consumes ')'
+(defn-fexpr bad (cond body) ...)
+
+;; GOOD — use unique names
+(defn-fexpr good (cnd bod) ...)
+```
+
+**2. Symbol capture**: Raw forms contain symbols from the caller's scope. Passing raw forms between fexprs can cause infinite recursion if the raw form references a parameter that gets rebound. Use `eval` to resolve forms before passing.
+
+**3. No variadic fexprs**: Like all arli functions, fexprs have a fixed arity. Variadic fexprs require parentheses.
+
+#### F-Expressions vs Regular Functions
+
+| Aspect | Regular Function | F-Expression |
+|--------|-----------------|--------------|
+| Arguments | Evaluated eagerly | Passed as raw forms |
+| Custom control flow | Not possible | Full control via `eval` |
+| Introspection | No | Can inspect caller's AST |
+| Performance | Optimal | Deferred eval overhead |
+| Definition | `defn name (params) body` | `defn-fexpr name (params) body` |
+
+---
+
+### Chapter 8: Using Go From arli
 
 Arli also runs on **Go** (`go/arli/`). The Go backend gives you access to Go's standard library through the same `.` operator.
 
@@ -655,7 +877,7 @@ Then define the package struct with the functions you want to expose.
 
 ---
 
-### Chapter 8: The Stack in Practice
+### Chapter 9: The Stack in Practice
 
 Now let's see how the stack influences real code organization. Here's a Fibonacci function written two ways:
 
@@ -674,16 +896,35 @@ Now let's see how the stack influences real code organization. Here's a Fibonacc
 
 **With stack operations (Forth style)**:
 ```clojure
-;; This takes some getting used to...
+;; Compute a * (b + c) using only stack words
+;; Stack: (a b c)
+over      ;; (a b c a)
+rot       ;; (b c a a)
+rot       ;; (c a a b)
+drop      ;; (c a a)  — wait, this discards c
+;; Better approach:
+;; push b, then a, compute a + b, then multiply by result
+swap dup  ;; (a c b c)  — save c for later multiplication  
+rot       ;; (c b a c)
++         ;; (c b+a)    — compute a + b
+*         ;; ((b+a)*c)  — multiply by c
 ```
 
+The stack style takes some getting used to. The key insight is that **arity-driven parsing** and **stack-based evaluation** are two sides of the same coin. Arity tells the parser how many arguments a function consumes. The stack is where those arguments live.
+
+For more flexible stack access, arli provides `pick` and `roll`:
+
+```
+pick n   ;; copy nth element (0=top) to the top: pick 0 = dup, pick 1 = over
+roll n   ;; rotate nth element to the top:    roll 1 = swap, roll 2 = rot
+```
 The stack style takes practice. Start with the Lisp style (variables and `let`) — it's familiar. As you get comfortable, you'll find yourself naturally using `dup`, `swap`, and `drop` to move data around without naming everything.
 
 The key insight is that **arity-driven parsing** and **stack-based evaluation** are two sides of the same coin. Arity tells the parser how many arguments a function consumes. The stack is where those arguments live. The parser groups, the evaluator executes, and the stack carries data between them.
 
 ---
 
-### Chapter 9: How It All Works
+### Chapter 10: How It All Works
 
 Let me pull back the curtain and show you how arli works internally.
 
@@ -734,7 +975,7 @@ The `python` special form uses Python's `eval()` function with the current arli 
 
 ---
 
-### Chapter 10: Where To Go From Here
+### Chapter 11: Where To Go From Here
 
 You now know enough to write real programs in arli. Here's what I'd suggest:
 

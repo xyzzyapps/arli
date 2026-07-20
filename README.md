@@ -1,6 +1,6 @@
 # arli
 
-**arli** (Hy + Arity) is a Forth-like Lisp dialect that eliminates parentheses through arity-driven parsing. If the number of arguments a function takes is known, you don't need parentheses. When arity is unknown, use parentheses as usual.
+**arli** (Hy + Arity) is a Forth-like Lisp dialect that eliminates parentheses through arity-driven parsing. If the number of arguments a function takes is known, you don't need parentheses. When arity is unknown (variadic), use parentheses as usual.
 
 ## Quick Example
 
@@ -9,17 +9,17 @@
 ;; arli (arity-driven, no parens):
 + 1 * 2 3         ;; => 7
 
-;; Define a function
-(defn add (x y) (+ x y))
-add 1 2           ;; => 3  (arity-driven: add takes 2 args)
+;; Define a function — no parens needed (defn=3, fn=2)
+defn add (x y) + x y
+add 1 2           ;; => 3  (add has arity 2)
 
-;; Recursive fibonacci
+;; Recursive fibonacci (defn-rec requires parens)
 (defn-rec fib (n)
-    (if (= n 0)
+    if (= n 0)
         0
-        (if (= n 1)
+        if (= n 1)
             1
-            + fib (- n 1) fib (- n 2))))
+            + fib (- n 1) fib (- n 2))
 
 print fib 10      ;; prints 55
 ```
@@ -31,15 +31,20 @@ print fib 10      ;; prints 55
 - **Lisp semantics**: S-expressions, lexical scoping, closures, first-class functions
 - **Vector/Map literals**: `[1 2 3]` and `{:key val}` syntax
 - **Keywords**: Self-evaluating `:keyword` symbols
+- **Hex/octal/bin literals**: `0xFF`, `0o77`, `0b1010`
+- **Triple-quoted strings**: `"""multi-line"""` strings
+- **Result type**: `Ok`/`Err` with `map-ok`, `and-then`, `or-else`
 - **Pattern matching**: `(match val (pat result) (_ default))`
 - **Sequence operations**: `map`, `filter`, `reduce` builtins
 - **Docstrings**: Documentation system via `(doc symbol "text")`
 - **Testing**: `(assert expr message)` for inline tests
 - **Module system**: `(import-module "path.arli")` for loading files
-- **Python interop**: Use any Python library via `import`, `.`, or `python`
+- **Python interop**: Use any Python library via `import`, `import!`, `.`, or `python`
 - **Go backend**: Compiled Go binary with Go standard library access
 - **Unicode symbols**: Greek, Cyrillic, Chinese, math symbols as function names
 - **REPL**: Interactive with stack inspection, debug mode, multi-line input
+- **F-expressions**: User-defined functions that don't evaluate arguments eagerly; custom control flow via `defn-fexpr` and `eval`
+
 ## Installation
 
 ```bash
@@ -67,23 +72,34 @@ python -m arli -e "+ 1 2"
 
 ## Syntax Guide
 
-### No parentheses needed (known arity)
+### No parentheses needed (all have known arity)
 ```clojure
 + 1 2              ;; arithmetic
 * + 1 2 3          ;; nested: (* (+ 1 2) 3)
 define x + 1 2     ;; variable definition
-print x            ;; function call
+if cond "yes" "no" ;; conditional (if=3)
+while cond body    ;; loop (while=2)
+set! x 42          ;; mutation (set!=2)
+for i list body    ;; iteration (for=3)
+let ((x 1)) body   ;; local bindings (let=2)
 dup 5              ;; stack operations
+print x            ;; function call
+. os sep           ;; attribute access (.=2)
+import os          ;; module import (import=1)
+quote + 1 2        ;; quote (quote=1)
+cond clauses       ;; multi-branch (cond=1)
+fn (x) * x 2       ;; anonymous function (fn=2)
+defn add (x y) + x y  ;; function definition (defn=3)
 ```
 
 ### Parentheses required (unknown/variadic arity)
 ```clojure
-(if cond then else)
-(defn name (params) body...)
-(do expr1 expr2 ...)
-(let ((x 1)) body)
-(while cond body...)
-(fn (x) (* x 2))
+(do expr1 expr2 ...)              ;; sequencing
+(list 1 2 3)                      ;; list creation
+(match val (pat result) (_ dflt)) ;; pattern matching
+(and a b c)                       ;; short-circuit AND
+(or a b c)                        ;; short-circuit OR
+(hash-map :a 1 :b 2)              ;; map creation
 ```
 
 ### Stack Operations
@@ -93,27 +109,101 @@ swap 1 2    ;; -> [2, 1]
 drop 42     ;; -> []
 over 1 2    ;; -> [1, 2, 1]
 rot 1 2 3   ;; -> [2, 3, 1]
+nip 1 2     ;; -> [2]
+tuck 1 2    ;; -> [2, 1, 2]
+pick 0 42 1  ;; -> copies 42 (index 0=top): stack [42, 1, 42]
+pick 1 42 1  ;; -> copies 1 (index 1):   stack [42, 1, 1]
+roll 1 42 1  ;; -> swaps:                 stack [1, 42]
 ```
 
-## Built-in Functions
+### F-Expressions (Custom Control Flow)
 
-**Arithmetic**: `+`, `-`, `*`, `/`, `//`, `%`, `neg`
-**Comparison**: `=`, `<`, `>`, `<=`, `>=`, `!=`
-**Logic**: `and`, `or`, `not`
-**Stack**: `dup`, `swap`, `drop`, `over`, `rot`, `nip`, `tuck`
-**Lists**: `cons`, `car`, `cdr`, `list`, `nil?`, `list?` `map`, `filter`, `reduce`
-**Sequences**: `map`, `filter`, `reduce`
-**Data**: `hash-map`, `list`
-**I/O**: `print`, `.`, `read`
-**Types**: `number?`, `string?`, `symbol?`, `fn?`
-**Testing**: `(assert expr message)`
-**Docs**: `(doc symbol)` / `(doc symbol "text")`
-**Matching**: `(match value clause...)`
+Define functions that **don't evaluate their arguments eagerly** — use `defn-fexpr` (arity 3) and `eval` (arity 1):
+
+```clojure
+;; Custom if — no parens needed (arity 3)
+defn-fexpr my-if (c t e)
+    if (eval c) (eval t) (eval e)
+
+my-if true "yes" "no"      ;; -> "yes"
+my-if false "yes" "no"     ;; -> "no"
+
+;; Short-circuit OR
+defn-fexpr short-or (a b)
+    let ((av (eval a)))
+        if av av (eval b)
+
+short-or true (print "never runs")     ;; -> True, no side effect
+short-or false (print "runs")           ;; prints "runs", returns nil
+
+;; Inspect raw AST (unevaluated arguments)
+defn-fexpr show (x) x
+show + 1 * 2 3          ;; returns raw AST, not 7
+```
+
+`defn-fexpr` works like `defn` (arity 3): `defn-fexpr name (params) body`.  
+`eval` evaluates a raw form in the current environment. Bodies with multiple expressions use `(do ...)`.
+
+**Caveat**: Parameter names must not match registered operator names (e.g., avoid `cond`, `list`, `not` as parameter names — they have arity and consume extra tokens).
+
+## Complete Arity Table
+
+Every operator has a documented arity. Arity >= 0 = no parens needed. Arity -1 = variadic (parens required).
+
+### Special Forms
+
+| Form | Arity | Example |
+|------|-------|---------|
+| `define` | 2 | `define x 42` |
+| `defn` | 3 | `defn add (x y) + x y` |
+| `defn-rec` | 3 | `defn-rec fact (n) (if ...)` |
+| `fn` | 2 | `fn (x) * x 2` |
+| `if` | 3 | `if cond "yes" "no"` |
+| `while` | 2 | `while (< i 5) (do ...)` |
+| `for` | 3 | `for x list print x` |
+| `let` | 2 | `let ((x 1)) + x 2` |
+| `set!` | 2+ | `set! x 42` / `(set! m :key val)` |
+| `cond` | 1 | `cond ((> x 0) "pos" true "other")` |
+| `quote` | 1 | `quote + 1 2` |
+| `do` | -1 | `(do a b c)` |
+| `import` | 1 | `import os` |
+| `import!` | 2 | `import! os myos` |
+| `.` | 2+ | `. os sep` / `(. os path join "a" "b")` |
+| `python` | 1 | `python "repr(42)"` |
+| `assert` | 2 | `(assert expr message)` |
+| `doc` | 1 | `doc add` | Retrieve documentation |
+| `doc!` | 2 | `doc! add "text"` | Store documentation |
+| `match` | -1 | `(match val (1 "one") (_ "other"))` |
+| `import-module` | 1 | `import-module "lib.arli"` |
+| `defn-fexpr` | 3 | `defn-fexpr my-if (c t e) if (eval c) (eval t) (eval e)` |
+| `eval` | 1 | `eval expr` |
+
+### Builtins
+
+| Category | Words (arity) |
+|----------|---------------|
+| Arithmetic | `+`(2) `-`(2) `*`(2) `/`(2) `//`(2) `%`(2) `neg`(1) |
+| Comparison | `=`(2) `<`(2) `>`(2) `<=`(2) `>=`(2) `!=`(2) |
+| Logic | `and`(-1) `or`(-1) `not`(1) |
+| Stack | `dup`(1) `swap`(2) `drop`(1) `over`(2) `rot`(3) `nip`(2) `tuck`(2) `pick`(1) `roll`(1) |
+| Lists | `cons`(2) `car`(1) `cdr`(1) `list`(-1) `nil?`(1) `list?`(1) |
+| Sequences | `map`(2) `filter`(2) `reduce`(3) |
+| Data | `hash-map`(-1) |
+| I/O | `print`(1) `.`(2) `read`(0) |
+| Types | `number?`(1) `string?`(1) `symbol?`(1) `fn?`(1) |
+| Result | `Ok`(1) `Err`(1) `map-ok`(2) `and-then`(2) `or-else`(2) |
+
 ## Development
 
 ```bash
 # Run tests
 python -m pytest tests/ -v
+
+# Run shared test suite (Python backend)
+python tests/run_tests.py --python
+
+# Run shared test suite (Go backend)
+python tests/run_tests.py --go
 ```
 
 ## How It Works

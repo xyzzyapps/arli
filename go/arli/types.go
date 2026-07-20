@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -124,18 +125,23 @@ func (b *HyaBuiltin) Call(args []HyaValue, ev *Evaluator) (HyaValue, error) {
 // ---------------------------------------------------------------------------
 
 type HyaFn struct {
-	Name   string
-	Params []HyaSymbol
-	Body   []HyaValue
-	Env    *Environment
+	Name     string
+	Params   []HyaSymbol
+	Body     []HyaValue
+	Env      *Environment
+	IsFexpr  bool // f-expressions don't evaluate arguments
 }
 
 func (f *HyaFn) HyaRepr() string {
+	kind := "fn"
+	if f.IsFexpr {
+		kind = "fexpr"
+	}
 	n := f.Name
 	if n == "" {
 		n = "anon"
 	}
-	return fmt.Sprintf("<fn %s>", n)
+	return fmt.Sprintf("<%s %s>", kind, n)
 }
 
 // ---------------------------------------------------------------------------
@@ -147,7 +153,30 @@ type GoValue struct {
 }
 
 func (g *GoValue) HyaRepr() string {
-	return fmt.Sprintf("<Go %s>", g.Value.Type().String())
+	v := g.Value
+	// Display maps in Python-style dict format
+	if v.Kind() == reflect.Map {
+		keys := v.MapKeys()
+		// Sort keys for deterministic output matching Python's insertion order
+		sort.Slice(keys, func(i, j int) bool {
+			return fmt.Sprintf("%v", keys[i].Interface()) < fmt.Sprintf("%v", keys[j].Interface())
+		})
+		var parts []string
+		for _, k := range keys {
+			kv := k.Interface()
+			keyStr := ""
+			switch s := kv.(type) {
+			case string:
+				keyStr = fmt.Sprintf("'%s'", s) // single quotes like Python dict repr
+			default:
+				keyStr = fmt.Sprintf("%v", kv)
+			}
+			valStr := reflectToHya(v.MapIndex(k)).HyaRepr()
+			parts = append(parts, fmt.Sprintf("%s: %s", keyStr, valStr))
+		}
+		return "{" + strings.Join(parts, ", ") + "}"
+	}
+	return fmt.Sprintf("<Go %s>", v.Type().String())
 }
 
 func (g *GoValue) GetField(name string) (HyaValue, error) {

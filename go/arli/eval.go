@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 )
@@ -37,25 +38,32 @@ func (ev *Evaluator) loadBuiltins() {
 			ev.Arities.Register(name, b.Arity)
 		}
 	}
-	// Special form arities
-	ev.Arities.Register("define", 2)
-	ev.Arities.Register("quote", 1)
-	ev.Arities.Register("do", -1)   // variadic — use parens
-	ev.Arities.Register("set!", 2)
-	ev.Arities.Register("let", 2)
-	ev.Arities.Register("if", 3)
-	ev.Arities.Register("while", 2)
-	ev.Arities.Register("for", 3)
-	ev.Arities.Register("cond", 1)
-	ev.Arities.Register("defn", 3)  // defn name (params) body
-	ev.Arities.Register("fn", 2)    // fn (params) body
-	ev.Arities.Register("import", 1)
-	ev.Arities.Register("import!", 2)
-	ev.Arities.Register(".", 2)
-	ev.Arities.Register("go", 1)
+	// Special form arities — ALL fixed, matching Python backend
+	ev.Arities.Register("define", 2)   // define name value
+	ev.Arities.Register("quote", 1)    // quote expr
+	ev.Arities.Register("do", -1)      // do -> variadic (use parens)
+	ev.Arities.Register("set!", 2)     // set! name value
+	ev.Arities.Register("let", 2)      // let bindings body
+	ev.Arities.Register("if", 3)       // if cond then else
+	ev.Arities.Register("while", 2)    // while cond body
+	ev.Arities.Register("for", 3)      // for var list body
+	ev.Arities.Register("cond", 1)     // cond clauses-list
+	ev.Arities.Register("defn", 3)     // defn name (params) body
+	ev.Arities.Register("defn-rec", 3) // defn-rec name (params) body
+	ev.Arities.Register("fn", 2)       // fn (params) body	ev.Arities.Register("import", 1)   // import module-name
+	ev.Arities.Register("import!", 2)  // import! module alias
+	ev.Arities.Register(".", 2)        // . obj attr
+	ev.Arities.Register("go", 1)       // go "code"
+	ev.Arities.Register("assert", 2)   // assert expr message
+	ev.Arities.Register("doc", 1)      // doc symbol (retrieve)
+	ev.Arities.Register("doc!", 2)     // doc! symbol "text" (store)
+	ev.Arities.Register("match", -1)   // match expr clause...
+	ev.Arities.Register("import-module", 1) // import-module "path"
+	ev.Arities.Register("defn-fexpr", 3)    // defn-fexpr name (params) body
 }
 
 func (ev *Evaluator) Eval(expr HyaValue) (HyaValue, error) {
+	
 	result, err := ev.evalExpr(expr)
 	if err != nil {
 		return nil, err
@@ -63,6 +71,7 @@ func (ev *Evaluator) Eval(expr HyaValue) (HyaValue, error) {
 	if result != nil {
 		ev.Stack = append(ev.Stack, result)
 	}
+	
 	return result, nil
 }
 
@@ -77,6 +86,10 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 		return v, nil
 	case HyaSymbol:
 		name := string(v)
+		// Keywords self-evaluate
+		if strings.HasPrefix(name, ":") {
+			return v, nil
+		}
 		// Constants
 		if name == "nil" {
 			return Nil, nil
@@ -100,8 +113,9 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 
 		head := v[0]
 		sym, isSym := head.(HyaSymbol)
+
+		// Non-symbol head: evaluate head, args, apply
 		if !isSym {
-			// Generic call
 			fn, err := ev.evalExpr(head)
 			if err != nil {
 				return nil, err
@@ -135,19 +149,19 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			}
 			nameExpr := v[1]
 			valueExpr := v[2]
-			if sym, ok := nameExpr.(HyaSymbol); ok {
+			if s, ok := nameExpr.(HyaSymbol); ok {
 				val, err := ev.evalExpr(valueExpr)
 				if err != nil {
 					return nil, err
 				}
-				ev.Env.Define(string(sym), val)
+				ev.Env.Define(string(s), val)
 				// Register arity for functions
 				if fn, ok := val.(*HyaFn); ok {
-					ev.Arities.Register(string(sym), len(fn.Params))
+					ev.Arities.Register(string(s), len(fn.Params))
 				} else if gv, ok := val.(*GoValue); ok && gv.Value.Kind() == reflect.Func {
 					t := gv.Value.Type()
 					numIn := t.NumIn()
-					ev.Arities.Register(string(sym), numIn)
+					ev.Arities.Register(string(s), numIn)
 				}
 				return val, nil
 			}
@@ -156,6 +170,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 
 		// DEFN
 		if name == "defn" {
+			
 			if len(v) < 4 {
 				return nil, fmt.Errorf("defn expects (defn name (params) body...)")
 			}
@@ -181,6 +196,41 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 				Params: paramSyms,
 				Body:   body,
 				Env:    ev.Env,
+			}
+			ev.Env.Define(string(nameSym), fn)
+			ev.Arities.Register(string(nameSym), len(paramSyms))
+			
+			return fn, nil
+		}
+
+		// DEFN-FEXPR
+		if name == "defn-fexpr" {
+			if len(v) < 4 {
+				return nil, fmt.Errorf("defn-fexpr expects (defn-fexpr name (params) body...)")
+			}
+			nameSym, ok := v[1].(HyaSymbol)
+			if !ok {
+				return nil, fmt.Errorf("defn-fexpr expects a symbol name")
+			}
+			params, ok := v[2].(HyaList)
+			if !ok {
+				return nil, fmt.Errorf("defn-fexpr expects a parameter list")
+			}
+			paramSyms := make([]HyaSymbol, len(params))
+			for i, p := range params {
+				if s, ok := p.(HyaSymbol); ok {
+					paramSyms[i] = s
+				} else {
+					return nil, fmt.Errorf("defn-fexpr params must be symbols")
+				}
+			}
+			body := v[3:]
+			fn := &HyaFn{
+				Name:    string(nameSym),
+				Params:  paramSyms,
+				Body:    body,
+				Env:     ev.Env,
+				IsFexpr: true,
 			}
 			ev.Env.Define(string(nameSym), fn)
 			ev.Arities.Register(string(nameSym), len(paramSyms))
@@ -303,6 +353,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			if !ok {
 				return nil, fmt.Errorf("cond expects a clause list")
 			}
+			// Clauses are flat pairs: (test1 result1 test2 result2 ...)
 			i := 0
 			for i < len(clauses)-1 {
 				test, err := ev.evalExpr(clauses[i])
@@ -314,10 +365,9 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 				}
 				i += 2
 			}
+			// Trailing single expression (always truthy)
 			if i < len(clauses) {
-				if IsTruthy(clauses[i]) {
-					// Trailing single truthy clause (no result)
-				}
+				return ev.evalExpr(clauses[i])
 			}
 			return Nil, nil
 		}
@@ -325,21 +375,56 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 		// SET!
 		if name == "set!" {
 			if len(v) < 3 {
-				return nil, fmt.Errorf("set! expects (set! name value)")
+				return nil, fmt.Errorf("set! expects (set! target value)")
 			}
 			nameExpr := v[1]
-			val, err := ev.evalExpr(v[2])
+			value := v[len(v)-1] // last arg is value (already evaled by generic path?)
+			val, err := ev.evalExpr(value)
 			if err != nil {
 				return nil, err
 			}
-			if sym, ok := nameExpr.(HyaSymbol); ok {
-				err := ev.Env.Set(string(sym), val)
+
+			// Simple variable set!
+			if s, ok := nameExpr.(HyaSymbol); ok && len(v) == 3 {
+				err := ev.Env.Set(string(s), val)
 				if err != nil {
 					return nil, err
 				}
 				return val, nil
 			}
-			return nil, fmt.Errorf("set! expects a symbol name")
+
+			// Nested structure set!: (set! obj key val) or (set! obj :key val)
+			if len(v) >= 4 {
+				obj, err := ev.evalExpr(v[1])
+				if err != nil {
+					return nil, err
+				}
+				key := v[2]
+				// For Go backend, we handle maps via GoValue wrapping
+				if gv, ok := obj.(*GoValue); ok && gv.Value.Kind() == reflect.Map {
+					// Use reflect to set map value
+					m := gv.Value
+					var keyVal reflect.Value
+					if s, ok := key.(HyaSymbol); ok && strings.HasPrefix(string(s), ":") {
+						keyVal = reflect.ValueOf(string(s))
+					} else {
+						keyVal = reflect.ValueOf(key.HyaRepr())
+					}
+					m.SetMapIndex(keyVal, reflect.ValueOf(val))
+					return val, nil
+				}
+				// List index set!
+				if list, ok := obj.(HyaList); ok {
+					if idx, ok := key.(HyaInt); ok {
+						i := int(int64(idx))
+						if i >= 0 && i < len(list) {
+							list[i] = val
+							return val, nil
+						}
+					}
+				}
+			}
+			return nil, fmt.Errorf("set! cannot set on target: %s", nameExpr.HyaRepr())
 		}
 
 		// LET
@@ -384,9 +469,9 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 		}
 
 		// IMPORT — Go module import via reflection
-		if name == "import" {
+		if name == "import" || name == "import!" {
 			if len(v) < 2 {
-				return nil, fmt.Errorf("import expects (import \"package\")")
+				return nil, fmt.Errorf("import expects (import module-name)")
 			}
 			pkgName := ""
 			switch p := v[1].(type) {
@@ -397,13 +482,17 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			default:
 				return nil, fmt.Errorf("import expects a symbol or string")
 			}
-			// Use Go's reflection to find the package
-			// For now, we use a simple approach: register known packages
 			mod, err := importGoPackage(pkgName)
 			if err != nil {
 				return nil, err
 			}
-			ev.Env.Define(pkgName, mod)
+			bindName := pkgName
+			if name == "import!" && len(v) >= 3 {
+				if s, ok := v[2].(HyaSymbol); ok {
+					bindName = string(s)
+				}
+			}
+			ev.Env.Define(bindName, mod)
 			return mod, nil
 		}
 
@@ -420,14 +509,12 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			for i < len(v) {
 				item := v[i]
 				if sym, ok := item.(HyaSymbol); ok {
-					// Attribute/method access
 					if gv, ok := obj.(*GoValue); ok {
 						obj, err = gv.GetField(string(sym))
 						if err != nil {
 							return nil, err
 						}
 					} else {
-						// Try to find the method via reflection on the Go side
 						return nil, fmt.Errorf("dot access requires Go value")
 					}
 					i++
@@ -452,7 +539,7 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			return obj, nil
 		}
 
-		// GO — evaluate arbitrary Go expression string
+		// GO — evaluate arbitrary Go expression string (placeholder)
 		if name == "go" {
 			if len(v) < 2 {
 				return nil, fmt.Errorf("go expects (go \"code\")")
@@ -464,12 +551,110 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 			return ev.evalGo(string(code))
 		}
 
-		// DEFAULTS
-		// Generic function call
+		// ASSERT
+		if name == "assert" {
+			if len(v) < 2 {
+				return nil, fmt.Errorf("assert expects (assert expr message)")
+			}
+			val, err := ev.evalExpr(v[1])
+			if err != nil {
+				return nil, err
+			}
+			if !IsTruthy(val) {
+				msg := ""
+				if len(v) >= 3 {
+					m, e := ev.evalExpr(v[2])
+					if e == nil {
+						msg = m.HyaRepr()
+					}
+				}
+				return nil, fmt.Errorf("Assertion failed: %s", msg)
+			}
+			return val, nil
+		}
+
+		// DOC: (doc symbol) — retrieve documentation
+		if name == "doc" {
+			if len(v) >= 2 {
+				sym := v[1]
+				if s, ok := sym.(HyaSymbol); ok {
+					docVal, err := ev.Env.Get("__doc_" + string(s))
+					if err == nil {
+						return docVal, nil
+					}
+				}
+			}
+			return Nil, nil
+		}
+
+		// DOC!: (doc! symbol "text") — store documentation
+		if name == "doc!" {
+			if len(v) >= 3 {
+				sym := v[1]
+				docText, err := ev.evalExpr(v[2])
+				if err != nil {
+					return nil, err
+				}
+				if s, ok := sym.(HyaSymbol); ok {
+					ev.Env.Define("__doc_"+string(s), docText)
+					return docText, nil
+				}
+			}
+			return Nil, nil
+		}
+		// MATCH
+		if name == "match" {
+			if len(v) < 2 {
+				return nil, fmt.Errorf("match expects (match expr clause...)")
+			}
+			matchVal, err := ev.evalExpr(v[1])
+			if err != nil {
+				return nil, err
+			}
+			for _, clause := range v[2:] {
+				if cl, ok := clause.(HyaList); ok && len(cl) >= 2 {
+					pattern := cl[0]
+					result := cl[1]
+					if matchPattern(pattern, matchVal) {
+						return ev.evalExpr(result)
+					}
+				}
+			}
+			return Nil, nil
+		}
+
+		// IMPORT-MODULE
+		if name == "import-module" {
+			if len(v) < 2 {
+				return nil, fmt.Errorf("import-module expects (import-module \"path\")")
+			}
+			pathVal, err := ev.evalExpr(v[1])
+			if err != nil {
+				return nil, err
+			}
+			path, ok := pathVal.(HyaString)
+			if !ok {
+				return nil, fmt.Errorf("import-module expects a string path")
+			}
+			return ev.execFile(string(path))
+		}
+
+		// ---- Generic function call ----
 		fn, err := ev.evalExpr(head)
 		if err != nil {
 			return nil, err
 		}
+
+		// For fexprs, pass raw (unevaluated) argument forms
+		if hf, ok := fn.(*HyaFn); ok && !hf.IsFexpr {
+			
+		}
+		if hf, ok := fn.(*HyaFn); ok && hf.IsFexpr {
+			args := make([]HyaValue, len(v)-1)
+			copy(args, v[1:])
+			return ev.apply(fn, args)
+		}
+
 		args := make([]HyaValue, len(v)-1)
 		for i, a := range v[1:] {
 			args[i], err = ev.evalExpr(a)
@@ -481,6 +666,66 @@ func (ev *Evaluator) evalExpr(expr HyaValue) (HyaValue, error) {
 	}
 
 	return Nil, nil
+}
+
+// matchPattern implements pattern matching for the match form
+func matchPattern(pattern HyaValue, value HyaValue) bool {
+	if sym, ok := pattern.(HyaSymbol); ok {
+		if string(sym) == "_" {
+			return true
+		}
+		// Symbols match by name equality
+		if vs, ok := value.(HyaSymbol); ok {
+			return string(sym) == string(vs)
+		}
+		return false
+	}
+	if plist, ok := pattern.(HyaList); ok {
+		if vlist, ok := value.(HyaList); ok {
+			if len(plist) != len(vlist) {
+				return false
+			}
+			for i, p := range plist {
+				if !matchPattern(p, vlist[i]) {
+					return false
+				}
+			}
+			return true
+		}
+		return false
+	}
+	// Literal matching
+	return hyaEqual(pattern, value)
+}
+
+// hyaEqual compares two HyaValue for equality
+func hyaEqual(a, b HyaValue) bool {
+	switch va := a.(type) {
+	case HyaInt:
+		if vb, ok := b.(HyaInt); ok {
+			return int64(va) == int64(vb)
+		}
+	case HyaFloat:
+		if vb, ok := b.(HyaFloat); ok {
+			return float64(va) == float64(vb)
+		}
+	case HyaString:
+		if vb, ok := b.(HyaString); ok {
+			return string(va) == string(vb)
+		}
+	case HyaBool:
+		if vb, ok := b.(HyaBool); ok {
+			return bool(va) == bool(vb)
+		}
+	case HyaSymbol:
+		if vb, ok := b.(HyaSymbol); ok {
+			return string(va) == string(vb)
+		}
+	case HyaNil:
+		_, ok := b.(HyaNil)
+		return ok
+	}
+	return false
 }
 
 // ---------------------------------------------------------------------------
@@ -525,13 +770,10 @@ func (ev *Evaluator) apply(fn HyaValue, args []HyaValue) (HyaValue, error) {
 }
 
 // ---------------------------------------------------------------------------
-// Go interop helpers
+// Module loading
 // ---------------------------------------------------------------------------
 
 func importGoPackage(pkgPath string) (HyaValue, error) {
-	// Use a registry of known Go standard library packages.
-	// In a full implementation, this would use go/packages or plugin.
-	// For now, we provide a mapping of commonly useful packages.
 	pkg, ok := goPackages[pkgPath]
 	if !ok {
 		return nil, fmt.Errorf("package not available (pre-registered): %s", pkgPath)
@@ -540,14 +782,13 @@ func importGoPackage(pkgPath string) (HyaValue, error) {
 }
 
 // goPackages is a registry of pre-loaded Go packages accessible from Hya.
-// Users can add packages by importing them in the Go source or via plugins.
 var goPackages = map[string]interface{}{
-	"fmt":  nil,  // populated at init
+	"fmt":     nil,
 	"strings": nil,
-	"math": nil,
-	"os":   nil,
-	"json": nil,
-	"time": nil,
+	"math":    nil,
+	"os":      nil,
+	"json":    nil,
+	"time":    nil,
 }
 
 func init() {
@@ -566,14 +807,14 @@ var fmtPackage = struct {
 }
 
 var stringsPackage = struct {
-	Join  func(elems []string, sep string) string
-	Split func(s, sep string) []string
-	ToUpper func(s string) string
-	ToLower func(s string) string
+	Join      func(elems []string, sep string) string
+	Split     func(s, sep string) []string
+	ToUpper   func(s string) string
+	ToLower   func(s string) string
 	TrimSpace func(s string) string
 	HasPrefix func(s, prefix string) bool
 	HasSuffix func(s, suffix string) bool
-	Contains func(s, substr string) bool
+	Contains  func(s, substr string) bool
 }{
 	Join:      strings.Join,
 	Split:     strings.Split,
@@ -595,8 +836,13 @@ var mathPackage = struct {
 	Ceil  func(x float64) float64
 	Pi    float64
 }{
-	Abs:   func(x float64) float64 { if x < 0 { return -x }; return x },
-	Sin:   func(x float64) float64 { return float64(0) }, // stub
+	Abs: func(x float64) float64 {
+		if x < 0 {
+			return -x
+		}
+		return x
+	},
+	Sin:   func(x float64) float64 { return float64(0) },
 	Cos:   func(x float64) float64 { return float64(0) },
 	Sqrt:  func(x float64) float64 { return float64(0) },
 	Pow:   func(x, y float64) float64 { return float64(0) },
@@ -606,9 +852,9 @@ var mathPackage = struct {
 }
 
 var osPackage = struct {
-	Getenv func(key string) string
-	Setenv func(key, value string) error
-	Getpid func() int
+	Getenv   func(key string) string
+	Setenv   func(key, value string) error
+	Getpid   func() int
 	Hostname func() (string, error)
 }{
 	Getenv:   func(key string) string { return "" },
@@ -617,9 +863,34 @@ var osPackage = struct {
 	Hostname: func() (string, error) { return "localhost", nil },
 }
 
-// evalGo evaluates a Go expression string
+// evalGo evaluates a Go expression string (placeholder)
 func (ev *Evaluator) evalGo(code string) (HyaValue, error) {
-	// In a full implementation, this would compile and run Go code.
-	// For now, we provide documentation that this is a placeholder.
 	return HyaString(fmt.Sprintf("<go eval: %s>", code)), nil
+}
+
+// execFile loads and executes an .arli file
+func (ev *Evaluator) execFile(path string) (HyaValue, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read module: %s: %v", path, err)
+	}
+	return ev.exec(string(data))
+}
+
+// exec parses and evaluates arli source code (interleaved parse-eval)
+func (ev *Evaluator) exec(source string) (HyaValue, error) {
+	tokens := Tokenize(source)
+	stream := NewTokenStream(tokens)
+	result := HyaValue(Nil)
+	for !stream.IsEOF() {
+		expr := ev.parser.parseExpr(stream, true)
+		if expr != nil {
+			var err error
+			result, err = ev.Eval(expr)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return result, nil
 }

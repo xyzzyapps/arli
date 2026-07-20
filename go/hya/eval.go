@@ -40,13 +40,15 @@ func (ev *Evaluator) loadBuiltins() {
 	// Special form arities
 	ev.Arities.Register("define", 2)
 	ev.Arities.Register("quote", 1)
-	ev.Arities.Register("do", 2)
+	ev.Arities.Register("do", -1)   // variadic — use parens
 	ev.Arities.Register("set!", 2)
 	ev.Arities.Register("let", 2)
 	ev.Arities.Register("if", 3)
 	ev.Arities.Register("while", 2)
 	ev.Arities.Register("for", 3)
 	ev.Arities.Register("cond", 1)
+	ev.Arities.Register("defn", 3)  // defn name (params) body
+	ev.Arities.Register("fn", 2)    // fn (params) body
 	ev.Arities.Register("import", 1)
 	ev.Arities.Register("import!", 2)
 	ev.Arities.Register(".", 2)

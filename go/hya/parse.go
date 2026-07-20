@@ -87,13 +87,7 @@ func (p *Parser) parseExpr(stream *TokenStream, allowArity bool) HyaValue {
 			return HyaSymbol(name)
 		}
 
-		// Special handler for defn/fn at top level
-		if name == "defn" {
-			return p.parseDefn(stream)
-		}
-		if name == "fn" {
-			return p.parseFn(stream)
-		}
+		// defn/fn use arity-driven parsing (arity 3 and 2)
 
 		// Arity-driven
 		if arity, ok := p.arities.Get(name); ok && arity >= 0 {

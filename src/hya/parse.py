@@ -144,12 +144,7 @@ class Parser:
                 # special handlers. The paren list provides grouping.
                 return Symbol(name)
 
-            # Special parsing for defn/fn (only at top level
-            # or in argument position, where arity-driven parsing applies)
-            if name == "defn":
-                return self._parse_defn(stream)
-            if name == "fn":
-                return self._parse_fn(stream)
+            # defn/fn use arity-driven parsing (arity 3 and 2 respectively)
 
             # Check arity table
             arity = self.arity_table.get(name)

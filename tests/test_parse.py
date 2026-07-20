@@ -75,14 +75,20 @@ def test_mixed():
     assert result[0] == [Symbol("print"), [Symbol("+"), 1, 2]]
 
 
-def test_defn_arity_registration():
-    """defn at top-level (no parens) registers arity."""
+def test_defn_parsed_as_arity3():
+    """defn at top-level (no parens) uses arity 3 — produces flat list."""
     table = ArityTable()
+    table.register("defn", 3)
+    table.register("+", 2)
     p = Parser(table)
 
-    # Top-level defn (without outer parens) uses special handler
-    p.parse("defn add (x y) + x y")
-    assert table.get("add") == 2
+    result = p.parse("defn add (x y) + x y")
+    assert len(result) == 1
+    expr = result[0]
+    assert len(expr) == 4  # [defn, add, [x, y], [+, x, y]]
+    assert isinstance(expr[0], Symbol) and expr[0].name == "defn"
+    assert isinstance(expr[3], list)  # body is [+, x, y]
+    assert expr[3][0].name == "+"
 
 
 def test_defn_inside_parens():
@@ -129,7 +135,7 @@ if __name__ == "__main__":
     test_nested_parens()
     test_quote()
     test_mixed()
-    test_defn_arity_registration()
+    test_defn_parsed_as_arity3()
     test_defn_inside_parens()
     test_literals()
     test_empty_parens()

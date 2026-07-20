@@ -242,7 +242,7 @@ def test_for_loop():
     """Test for loop with arity 3: for var list body."""
     ev = Evaluator()
     ev.exec("define result nil")
-    ev.exec('for x (list 1 2 3) do print x set! result x')
+    ev.exec('for x (list 1 2 3) (do print x set! result x)')
     # After loop, result should be 3 (last value)
     assert ev.env.get("result") == 3
     print("  OK test_for_loop")
@@ -323,7 +323,7 @@ def test_while_without_parens():
     """Test while cond body WITHOUT parens — uses arity 2."""
     ev = Evaluator()
     ev.exec("define i 0")
-    ev.exec("while (< i 5) do print i set! i + i 1")
+    ev.exec("while (< i 5) (do print i set! i + i 1)")
     assert ev.env.get("i") == 5
     print("  OK test_while_without_parens")
 

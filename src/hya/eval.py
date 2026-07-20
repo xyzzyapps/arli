@@ -66,13 +66,15 @@ class Evaluator:
         # Special form arities — ALL fixed, no parens needed
         self.arity_table.register("define", 2)   # define name value
         self.arity_table.register("quote", 1)    # quote expr
-        self.arity_table.register("do", 2)       # do expr1 expr2
+        self.arity_table.register("do", -1)      # do -> variadic (use parens)
         self.arity_table.register("set!", 2)     # set! name value
         self.arity_table.register("let", 2)      # let bindings body
         self.arity_table.register("if", 3)       # if cond then else
         self.arity_table.register("while", 2)    # while cond body
         self.arity_table.register("for", 3)      # for var list body
         self.arity_table.register("cond", 1)     # cond clauses-list
+        self.arity_table.register("defn", 3)     # defn name (params) body
+        self.arity_table.register("fn", 2)       # fn (params) body
         self.arity_table.register("import", 1)   # import module-name
         self.arity_table.register("import!", 2)  # import! module alias
         self.arity_table.register(".", 2)        # . obj attr

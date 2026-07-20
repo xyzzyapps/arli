@@ -63,14 +63,16 @@ class Evaluator:
                 self.arity_table.register(name, builtin.arity)
             # arity -1 (variadic) means the symbol is registered but with
             # 'variadic' marker — user must use parens
-        # Special form arities
-        self.arity_table.register("define", 2)
-        self.arity_table.register("quote", 1)
-        self.arity_table.register("do", -1)
-        self.arity_table.register("set!", 2)
-        self.arity_table.register("let", -1)
-        self.arity_table.register("if", 3)
-        self.arity_table.register("while", -1)
+        # Special form arities — ALL fixed, no parens needed
+        self.arity_table.register("define", 2)   # define name value
+        self.arity_table.register("quote", 1)    # quote expr
+        self.arity_table.register("do", 2)       # do expr1 expr2
+        self.arity_table.register("set!", 2)     # set! name value
+        self.arity_table.register("let", 2)      # let bindings body
+        self.arity_table.register("if", 3)       # if cond then else
+        self.arity_table.register("while", 2)    # while cond body
+        self.arity_table.register("for", 3)      # for var list body
+        self.arity_table.register("cond", 1)     # cond clauses-list
 
     def eval(self, expr: Any) -> Any:
         """Evaluate a single expression and return the result.
@@ -197,11 +199,11 @@ class Evaluator:
                         "fn expects a parameter list")
                 return Function(params, body, self.env)
 
-            # WHILE: loop while condition is truthy
+            # WHILE: loop while condition is truthy (arity 2)
             if isinstance(head, Symbol) and head.name == "while":
                 if len(expr) < 3:
                     raise SyntaxError(
-                        "while expects (while cond body...)")
+                        "while expects (while cond body)")
                 cond_expr = expr[1]
                 body_exprs = expr[2:]
                 result = nil
@@ -209,6 +211,48 @@ class Evaluator:
                     for subexpr in body_exprs:
                         result = self._eval_expr(subexpr)
                 return result
+
+            # FOR: iterate over a list (arity 3: var list body)
+            if isinstance(head, Symbol) and head.name == "for":
+                if len(expr) < 4:
+                    raise SyntaxError(
+                        "for expects (for var list body)")
+                var_expr = expr[1]
+                list_expr = self._eval_expr(expr[2])
+                body_expr = expr[3:]
+                if not isinstance(var_expr, Symbol):
+                    raise SyntaxError(
+                        f"for expects a symbol as variable, got {var_expr}")
+                if not isinstance(list_expr, list):
+                    raise TypeError(
+                        f"for expects a list, got {type(list_expr)}")
+                result = nil
+                for item in list_expr:
+                    self.env.define(var_expr.name, item)
+                    for subexpr in body_expr:
+                        result = self._eval_expr(subexpr)
+                return result
+
+            # COND: multi-branch conditional (arity 1: clause-list)
+            # Clauses are flat pairs: (test1 result1 test2 result2 ...)
+            if isinstance(head, Symbol) and head.name == "cond":
+                if len(expr) < 2:
+                    raise SyntaxError(
+                        "cond expects (cond clause...)")
+                clauses = expr[1]
+                if isinstance(clauses, list):
+                    i = 0
+                    while i < len(clauses) - 1:
+                        test = self._eval_expr(clauses[i])
+                        result = clauses[i + 1]
+                        if is_truthy(test):
+                            return self._eval_expr(result)
+                        i += 2
+                    # Trailing single clause (else-like)
+                    if i < len(clauses):
+                        if is_truthy(self._eval_expr(clauses[i])):
+                            return self._eval_expr(clauses[i])
+                return nil
 
             # SET!: mutate a binding
             if isinstance(head, Symbol) and head.name == "set!":

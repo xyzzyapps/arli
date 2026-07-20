@@ -238,6 +238,96 @@ def test_truthy_falsy():
 from src.hya.types import is_truthy
 
 
+def test_for_loop():
+    """Test for loop with arity 3: for var list body."""
+    ev = Evaluator()
+    ev.exec("define result nil")
+    ev.exec('for x (list 1 2 3) do print x set! result x')
+    # After loop, result should be 3 (last value)
+    assert ev.env.get("result") == 3
+    print("  OK test_for_loop")
+
+
+def test_cond_simple():
+    """Test cond with clauses list."""
+    ev = Evaluator()
+    ev.exec("define x 5")
+    result = ev.exec('cond ((> x 10) "big" (< x 3) "small" true "medium")')
+    assert result == "medium"
+    print("  OK test_cond_simple")
+
+
+def test_cond_first_match():
+    """Test cond returns first matching clause."""
+    ev = Evaluator()
+    ev.exec("define x 15")
+    result = ev.exec('cond ((> x 10) "big" true "fallback")')
+    assert result == "big"
+    print("  OK test_cond_first_match")
+
+
+def test_cond_fallthrough():
+    """Test cond with no matches returns nil."""
+    ev = Evaluator()
+    result = ev.exec("cond (false 1 nil 2)")
+    # false is falsy, nil is falsy, so nothing matches
+    assert result is nil
+    print("  OK test_cond_fallthrough")
+
+
+def test_cond_nested():
+    """Test cond with arity-driven expressions inside clauses."""
+    ev = Evaluator()
+    ev.exec("define x 7")
+    result = ev.exec("cond ((< x 5) 0 (= x 7) (+ 10 20) true 99)")
+    assert result == 30  # 10 + 20 = 30
+    print("  OK test_cond_nested")
+
+
+def test_for_no_body():
+    """Test for with empty body."""
+    ev = Evaluator()
+    result = ev.exec("for x (list 1 2 3) nil")
+    assert result is nil
+    print("  OK test_for_no_body")
+
+
+def test_for_arity_driven():
+    """Test for WITHOUT parens — uses arity 3."""
+    ev = Evaluator()
+    ev.exec("define sum 0")
+    ev.exec("for x (list 1 2 3 4 5) set! sum + sum x")
+    assert ev.env.get("sum") == 15  # 1+2+3+4+5 = 15
+    print("  OK test_for_arity_driven")
+
+
+def test_if_without_parens():
+    """Test if cond then else WITHOUT parens — uses arity 3."""
+    ev = Evaluator()
+    result = ev.exec('if true "yes" "no"')
+    assert result == "yes"
+    result = ev.exec('if nil "yes" "no"')
+    assert result == "no"
+    print("  OK test_if_without_parens")
+
+
+def test_let_without_parens():
+    """Test let bindings body WITHOUT parens — uses arity 2."""
+    ev = Evaluator()
+    result = ev.exec('let ((x 5) (y 3)) + x y')
+    assert result == 8
+    print("  OK test_let_without_parens")
+
+
+def test_while_without_parens():
+    """Test while cond body WITHOUT parens — uses arity 2."""
+    ev = Evaluator()
+    ev.exec("define i 0")
+    ev.exec("while (< i 5) do print i set! i + i 1")
+    assert ev.env.get("i") == 5
+    print("  OK test_while_without_parens")
+
+
 if __name__ == "__main__":
     tests = [
         test_literal,
@@ -264,6 +354,16 @@ if __name__ == "__main__":
         test_neg,
         test_multi_expr_file,
         test_truthy_falsy,
+        test_for_loop,
+        test_cond_simple,
+        test_cond_first_match,
+        test_cond_fallthrough,
+        test_cond_nested,
+        test_for_no_body,
+        test_for_arity_driven,
+        test_if_without_parens,
+        test_let_without_parens,
+        test_while_without_parens,
     ]
     
     failed = 0

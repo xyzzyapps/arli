@@ -28,6 +28,23 @@ Token = tuple[str, str | int | float]  # (type, value)
 # Tokenizer
 # ---------------------------------------------------------------------------
 
+import unicodedata
+
+def _is_symbol_start(ch: str) -> bool:
+    """Check if a character can start a symbol name.
+    Accepts letters, Unicode symbols (math, currency, etc.),
+    and ASCII symbol characters."""
+    if ch.isalpha() or ch.isidentifier():
+        return True
+    try:
+        cat = unicodedata.category(ch)
+        if cat.startswith('S'):  # Symbol categories: Sm, Sc, Sk, So
+            return True
+    except ValueError:
+        pass
+    return ch in '!$%&*./:<=>?@^_~'
+
+
 def tokenize(source: str) -> list[Token]:
     """Tokenize arli source code into a list of tokens.
 
@@ -134,7 +151,7 @@ def tokenize(source: str) -> list[Token]:
                 i += 1
         elif ch.isdigit():
             pass
-        elif ch.isalpha() or ch in '!$%&*./:<=>?@^_~':
+        elif _is_symbol_start(ch):
             pass
         else:
             # Skip unknown character

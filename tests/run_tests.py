@@ -26,7 +26,7 @@ GO_BINARY = os.path.join(os.path.dirname(__file__), '..', 'go', 'arli', 'arli.ex
 
 def discover_tests():
     """Return list of (test_name, filepath) tuples sorted by filename."""
-    files = sorted(glob.glob(os.path.join(TEST_DIR, '*.hya')))
+    files = sorted(glob.glob(os.path.join(TEST_DIR, '*.arli')))
     tests = []
     for f in files:
         name = os.path.splitext(os.path.basename(f))[0]

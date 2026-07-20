@@ -29,9 +29,10 @@ print fib 10      ;; prints 55
 - **Arity-driven syntax**: Functions with known arity don't need parentheses
 - **Stack-based evaluation**: Forth-like data stack with `dup`, `swap`, `drop`, `over`, `rot`
 - **Lisp semantics**: S-expressions, lexical scoping, closures, first-class functions
-- **Python interop**: Written in Python, easy to extend with Python builtins
+- **Python interop**: Use any Python library via `import`, `.`, or `python`
+- **Go backend**: Compiled Go binary with Go standard library access
+- **Unicode symbols**: Greek, Cyrillic, Chinese, math symbols as function names
 - **REPL**: Interactive with stack inspection, debug mode, multi-line input
-
 ## Installation
 
 ```bash

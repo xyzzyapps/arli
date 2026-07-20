@@ -167,8 +167,12 @@ func isDigit(ch rune) bool {
 }
 
 func isSymbolStart(ch rune) bool {
-	return unicode.IsLetter(ch) || ch == '_' ||
-		ch == '!' || ch == '$' || ch == '%' || ch == '&' ||
+	// Accept Unicode letters and symbols (Greek, Cyrillic, Chinese, math, etc.)
+	if unicode.IsLetter(ch) || unicode.IsSymbol(ch) {
+		return true
+	}
+	// ASCII symbol characters
+	return ch == '_' || ch == '!' || ch == '$' || ch == '%' || ch == '&' ||
 		ch == '*' || ch == '+' || ch == '-' || ch == '.' ||
 		ch == '/' || ch == ':' || ch == '<' || ch == '=' ||
 		ch == '>' || ch == '?' || ch == '@' || ch == '^' || ch == '~'

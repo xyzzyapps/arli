@@ -88,6 +88,19 @@ This is the complete syntax of arli:
 2. If a function's arity is **unknown** (variadic), use parentheses: `(list 1 2 3)`
 3. If you want to be explicit, use parentheses anywhere: `(+ 1 2)` is the same as `+ 1 2`
 
+**Unicode symbols** are fully supported as function and variable names — Greek letters, Cyrillic, Chinese characters, even math symbols:
+
+```
+arli> define π 3.14159
+3.14159
+arli> define λ (fn (x) * x 2)
+<fn λ>
+arli> λ 5
+10
+arli> define 加倍 (fn (x) * x 2)
+<fn 加倍>
+```
+
 All of arli's built-in operators have known arities. **None of them need parentheses.** Let's see what that looks like.
 
 ---

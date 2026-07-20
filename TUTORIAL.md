@@ -34,6 +34,8 @@ And finally, arli sits **on top of Python**. Every Python module, function, and 
 
 ### Chapter 1: The Simplest Things
 
+**What you'll build by the end of this chapter:** A working postfix calculator that reads expressions like `3 4 + 2 *` and computes them correctly. Along the way you'll learn how arli's arity-driven syntax works, how to do arithmetic, and how to see what's on the stack.
+
 Let's start with arithmetic. Fire up the arli REPL:
 
 ```
@@ -134,9 +136,26 @@ arli> define åŠ å€ (fn (x) * x 2)
 
 All of arli's built-in operators have known arities. **None of them need parentheses.** Let's see what that looks like.
 
+#### Practical Exercise: Temperature Converter
+
+Let's apply what you've learned. Write an expression that converts 100 degrees Fahrenheit to Celsius using the formula `(F - 32) * 5/9`:
+
+```
+arli> * - 100 32 / 5 9
+37.77777777777778
+```
+
+How does this work? The parser sees `*` (arity 2). Its first argument is `- 100 32` (since `-` has arity 2). Its second argument is `/ 5 9` (since `/` has arity 2). So it's `(* (- 100 32) (/ 5 9))` = `68 * 0.555...` = `37.78`.
+
+No parentheses, no variables, just the math expressed naturally. The stack handles all intermediate values automatically.
+
+
+
 ---
 
 ### Chapter 2: The Core Operators
+
+**What you'll build:** A number-guessing game using `if`, `while`, `define`, and `let`. You'll learn how to make decisions, store values, loop, and create local scopes — the essential toolkit for any program.
 
 #### if: The Three-Way Conditional
 
@@ -270,9 +289,35 @@ arli> cond ((> x 10) "big" (< x 3) "small" true "medium")
 
 The list contains pairs: `(> x 10)` paired with `"big"`, `(< x 3)` paired with `"small"`, and `true` (always matches) paired with `"medium"`. `cond` walks through the pairs, evaluates each test, and returns the result of the first truthy test.
 
+
+
+#### Practical Exercise: Number Guessing Game
+
+Let's combine `if`, `while`, `define`, and `let` into a real program. This game picks a number and gives you feedback:
+
+```clojure
+(import random)
+(define target (. random randint 1 100))
+(define guess -1)
+(while (!= guess target)
+    (do
+        (print "Guess a number (1-100):")
+        (define guess (. int (host "input()")))
+        (if (< guess target)
+            (print "Too low!")
+            (if (> guess target)
+                (print "Too high!")
+                (print "Correct!")))))
+```
+
+This uses Python's `random` module, `input()` for user input, and arli's control flow — all working together without parentheses on any known-arity form.
+
+
 ---
 
 ### Chapter 3: The Stack
+
+**What you'll build:** A postfix (RPN) calculator that evaluates expressions like `3 4 + 2 *` using stack operations — and understand exactly how data flows through arli's evaluator.
 
 Now let's talk about the stack. arli isn't just a Lisp â€” it's a **Forth-like** Lisp. This means there's an explicit data stack that all operations push to and pop from.
 
@@ -383,6 +428,8 @@ These stack operations are the building blocks of concatenative programming. Ins
 
 ### Chapter 4: Defining Functions
 
+**What you'll build:** A library of reusable mathematical functions — `square`, `cube`, `average`, `factorial` — and understand how arli knows how many arguments each one takes without you telling it.
+
 #### defn: The Standard Way
 
 `defn` has arity 3, so you can use it without parentheses:
@@ -436,6 +483,8 @@ The `fn` form creates an anonymous function. When you `define` it, arli detects 
 ---
 
 ### Chapter 5: Using Python From arli
+
+**What you'll build:** A script that reads a JSON configuration file, extracts values, and uses them to process files — combining arli's syntax with Python's entire standard library.
 
 The whole reason arli exists on top of Python is to give you access to Python's libraries. Let's see how it works.
 
@@ -537,6 +586,8 @@ This is the power of arli: Lisp-like syntax with Forth-like stack semantics and 
 ---
 
 ### Chapter 6: Vectors, Maps, and Keywords
+
+**What you'll build:** A small database of records using maps and keywords, queried with pattern matching — a contact list you can look up by name or field.
 
 Arli provides literal syntax for vectors and maps as syntactic sugar.
 
@@ -665,6 +716,8 @@ Error: Assertion failed: "this fails"
 ---
 
 ### Chapter 7: F-Expressions â€” Functions That Don't Evaluate
+
+**What you'll build:** Your own control structures — `unless`, `n-times`, `short-or` — that short-circuit, repeat, or skip evaluation just like built-in forms. You'll understand how Lisp-style fexprs give you macro-like power without a macro system.
 
 Every function you've seen so far evaluates its arguments eagerly. When you write `+ 1 2`, both `1` and `2` are computed before `+` sees them. That's normally what you want.
 
@@ -803,6 +856,8 @@ In fexprs, `eval` is how you selectively evaluate arguments. An argument you don
 
 ### Chapter 8: Using Go From arli
 
+**What you'll build:** A compiled Go binary that runs arli programs with access to Go's `fmt`, `math`, and `strings` packages — for when you need native performance.
+
 Arli also runs on **Go** (`go/arli/`). The Go backend gives you access to Go's standard library through the same `.` operator.
 
 #### Pre-registered Packages
@@ -878,6 +933,8 @@ Then define the package struct with the functions you want to expose.
 ---
 
 ### Chapter 9: The Stack in Practice
+
+**What you'll build:** A deep understanding of how data flows through arli — using `/stack`, `pick`, and `roll` to inspect and manipulate accumulated results without naming intermediate values.
 
 Every expression result in arli is pushed onto an explicit **data stack**. You can inspect it with `/stack`:
 
@@ -971,6 +1028,8 @@ You don't need to actively manage the stack for most code â€” just write ex
 
 ### Chapter 10: How It All Works
 
+**What you'll build:** A mental model of arli's internals — tokenization, arity-driven parsing, stack evaluation, and host language interop — so you can reason about what your code actually does.
+
 Let me pull back the curtain and show you how arli works internally.
 
 #### Step 1: Tokenization
@@ -1021,6 +1080,8 @@ The `python` special form uses Python's `eval()` function with the current arli 
 ---
 
 ### Chapter 11: Stack Reflection and Self-Modifying Code
+
+**What you'll build:** A program that can inspect its own stack, transform it with list operations, and even rewrite its own code using the exec stack — the foundation for genetic programming and self-optimizing systems.
 
 So far, the stack has been a behind-the-scenes mechanism â€” results accumulate, words like `dup` and `swap` rearrange them, and `/stack` lets you peek. But what if you could **capture the stack as data**, manipulate it with list operations, and put it back? And what if there was a **second stack** â€” one that holds code instead of data â€” so programs can rewrite themselves during execution?
 
@@ -1351,6 +1412,205 @@ Stack reflection and the exec stack are advanced features. Use them when:
 For everyday arli programming, the normal arity-driven style (`+ 1 2`, `if cond then else`, `defn name (params) body`) is cleaner and faster. Stack reflection is a power tool for when you need to break the normal rules.
 
 ---
+
+
+
+---
+
+## Part 2: Common Lisp Cookbook
+
+Task-oriented recipes for getting things done with arli.
+
+---
+
+### Recipe 1: Read a File
+
+```clojure
+import pathlib
+define root . pathlib Path "."
+define content . (root / "data.txt") read_text
+print content
+```
+
+### Recipe 2: Write a File
+
+```clojure
+import pathlib
+define root . pathlib Path "."
+(. (root / "output.txt") write_text "hello from arli")
+```
+
+### Recipe 3: Parse JSON
+
+```clojure
+import json
+define data host "{'name': 'arli', 'version': 1}"
+define parsed . json loads data
+. parsed name
+```
+
+### Recipe 4: Make an HTTP Request
+
+```clojure
+import urllib.request
+define req . urllib.request Request "https://api.github.com/repos/arli/arli"
+define resp . urllib.request urlopen req
+define data . json loads (. resp read decode "utf-8")
+. data stargazers_count
+```
+
+### Recipe 5: Work with Dates
+
+```clojure
+import datetime
+define now . datetime datetime now
+. now year
+. now strftime "%Y-%m-%d"
+```
+
+### Recipe 6: Use Regular Expressions
+
+```clojure
+import re
+define text "The quick brown fox"
+define match . re search "brown|red" text
+if match (. match group) "no match"
+```
+
+### Recipe 7: List Directory Contents
+
+```clojure
+import pathlib
+define root . pathlib Path "."
+for f root iterdir
+    if (. f suffix == ".arli")
+        print (. f name)
+```
+
+### Recipe 8: Build a CLI Tool (wc.arli)
+
+```clojure
+;; word count utility
+import pathlib, sys
+define filename (. sys argv __getitem__ 1)
+define text . (pathlib Path filename) read_text
+(do
+    print "Lines:" (len (. text splitlines))
+    print "Words:" (len (. text split))
+    print "Chars:" (len text))
+```
+
+Run: `python -m arli wc.arli myfile.txt`
+
+### Recipe 9: Error Handling with Ok/Err
+
+```clojure
+define safe-divide
+    fn (a b)
+        if (= b 0) (Err "division by zero")
+            (Ok / a b)
+
+define process
+    fn (x)
+        and-then (safe-divide 100 x)
+            fn (val) (Ok * val 2))
+
+(process 25)  ;; (Ok 8)
+(process 0)   ;; (Err "division by zero")
+```
+
+### Recipe 10: Data Pipeline
+
+```clojure
+reduce (fn (acc x) + acc x) 0
+    map (fn (x) * x 2)
+        filter (fn (x) = 0 % x 2)
+            list 1 2 3 4 5 6  ;; -> 24
+```
+
+### Recipe 11: Postfix Calculator (Exec Stack)
+
+```clojure
+define calc
+    fn (expr)
+        (do exec! expr (exec))
+
+calc (list 3 4 (quote +) 2 (quote *))  ;; -> 14
+```
+
+### Recipe 12: Benchmark
+
+```clojure
+import time
+define bench
+    fn (fn-to-call repeats)
+        (do
+            define start . time time
+            define i 0
+            while (< i repeats)
+                (do fn-to-call set! i + i 1)
+            - . time time start)
+
+print bench (fn () + 1 1) 10000
+```
+
+### Recipe 13: String Formatting
+
+```clojure
+define name "arli"
+define version 1
+print (host "f'Hello from {name} v{version}!'")
+```
+
+### Recipe 14: Environment Variables
+
+```clojure
+import os
+define home . os environ get "HOME"
+define path . os environ get "PATH"
+```
+
+### Recipe 15: Process CSV
+
+```clojure
+import csv, io
+define data "name,age\\nAlice,30\\nBob,25"
+define reader . csv DictReader (. io StringIO data)
+for row reader
+    print "Name:" (. row get "name")
+```
+
+### Recipe 16: Custom Control Flow (F-Expressions)
+
+```clojure
+defn-fexpr unless (cond body)
+    if (eval cond) nil (eval body)
+
+unless false (print "this runs")
+
+defn-fexpr n-times (n body)
+    let ((i 0))
+        while (< i (eval n))
+            (do (eval body) set! i + i 1)
+
+n-times 3 (print "hello")
+```
+
+### Recipe 17: Cross-Backend Code
+
+```clojure
+;; Works on Python and JS backends
+defn fib (n)
+    if (< n 2) n
+        + fib (- n 1) fib (- n 2)
+
+print "fib 10:" fib 10
+
+;; host adapts per backend:
+;;   Python: host "repr(42)"
+;;   JS:     host "JSON.stringify(42)"
+```
+
 
 ### Chapter 12: Where To Go From Here
 

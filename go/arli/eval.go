@@ -56,7 +56,7 @@ func (ev *Evaluator) loadBuiltins() {
 	ev.Arities.Register("fn", 2)       // fn (params) body	ev.Arities.Register("import", 1)   // import module-name
 	ev.Arities.Register("import!", 2)  // import! module alias
 	ev.Arities.Register(".", 2)        // . obj attr
-	ev.Arities.Register("go", 1)       // go "code"
+	ev.Arities.Register("host", 1)     // host "code"
 	ev.Arities.Register("assert", 2)   // assert expr message
 	ev.Arities.Register("doc", 1)      // doc symbol (retrieve)
 	ev.Arities.Register("doc!", 2)     // doc! symbol "text" (store)
@@ -543,7 +543,7 @@ func (ev *Evaluator) evalExpr(expr ArliValue) (ArliValue, error) {
 		}
 
 		// GO â€” evaluate arbitrary Go expression string (placeholder)
-		if name == "go" {
+		if name == "host" {
 			if len(v) < 2 {
 				return nil, fmt.Errorf("go expects (go \"code\")")
 			}
@@ -551,7 +551,7 @@ func (ev *Evaluator) evalExpr(expr ArliValue) (ArliValue, error) {
 			if !ok {
 				return nil, fmt.Errorf("go expects a string")
 			}
-			return ev.evalGo(string(code))
+			return ev.evalHost(string(code))
 		}
 
 		// ASSERT
@@ -866,10 +866,9 @@ var osPackage = struct {
 	Hostname: func() (string, error) { return "localhost", nil },
 }
 
-// evalGo evaluates a Go expression string (placeholder)
-func (ev *Evaluator) evalGo(code string) (ArliValue, error) {
-	return ArliString(fmt.Sprintf("<go eval: %s>", code)), nil
-}
+// evalHost evaluates a host expression string (placeholder)
+func (ev *Evaluator) evalHost(code string) (ArliValue, error) {
+	return ArliString(fmt.Sprintf("<host eval: %s>", code)), nil}
 
 // execFile loads and executes an .arli file
 func (ev *Evaluator) execFile(path string) (ArliValue, error) {

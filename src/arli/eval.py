@@ -81,7 +81,7 @@ class Evaluator:
         self.arity_table.register("import", 1)   # import module-name
         self.arity_table.register("import!", 2)  # import! module alias
         self.arity_table.register(".", 2)        # . obj attr
-        self.arity_table.register("python", 1)   # python "code"
+        self.arity_table.register("host", 1)   # host "code"
         self.arity_table.register("assert", 2)     # assert expr message
         self.arity_table.register("doc", 1)        # doc symbol (retrieve)
         self.arity_table.register("doc!", 2)       # doc! symbol "text" (store)
@@ -409,10 +409,10 @@ class Evaluator:
                 return obj
 
             # PYTHON: evaluate arbitrary Python expression
-            if isinstance(head, Symbol) and head.name == "python":
+            if isinstance(head, Symbol) and head.name == "host":
                 if len(expr) < 2:
                     raise SyntaxError(
-                        "python expects (python \"code\")")
+                        "host expects (host \"code\")")
                 code = expr[1]
                 if isinstance(code, str):
                     import builtins as py_builtins
@@ -425,9 +425,9 @@ class Evaluator:
                         return result
                     except Exception as e:
                         raise RuntimeError(
-                            f"Python eval error: {e}")
+                            f"Host eval error: {e}")
                 raise TypeError(
-                    f"python expects a string, got {type(code)}")
+                    f"host expects a string, got {type(code)}")
 
             # ASSERT: (assert expr message)
             if isinstance(head, Symbol) and head.name == "assert":

@@ -1,4 +1,4 @@
-;; FizzBuzz in Hya
+;; FizzBuzz in arli
 ;; Demonstrates arity-driven syntax + parens for special forms
 
 (defn fizzbuzz (n)

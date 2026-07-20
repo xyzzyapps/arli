@@ -4,6 +4,19 @@
   "description": "arli — Arity-driven Forth-like Lisp (JavaScript port)",
   "type": "module",
   "main": "src/main.js",
+  "browser": "src/arli-browser.js",
+  "exports": {
+    ".": {
+      "browser": "./src/arli-browser.js",
+      "default": "./src/main.js"
+    },
+    "./eval": "./src/eval.js",
+    "./types": "./src/types.js",
+    "./parse": "./src/parse.js",
+    "./tokenize": "./src/tokenize.js",
+    "./builtins": "./src/builtins.js",
+    "./env": "./src/env.js"
+  },
   "scripts": {
     "start": "node src/main.js",
     "test": "node tests/run_tests.js",

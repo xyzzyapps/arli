@@ -91,7 +91,15 @@ export function getBuiltins() {
 
   // I/O
   reg('print', (args, ev) => { console.log(arliRepr(args[0])); return args[0]; }, 1);
-  reg('.', (args, ev) => { process.stdout.write(arliRepr(args[0])); return args[0]; }, 1);
+  reg('.', (args, ev) => {
+    // Forth-style dot — print value (no newline). Works in Node and browser.
+    if (typeof process !== 'undefined' && process.stdout) {
+      process.stdout.write(arliRepr(args[0]));
+    } else {
+      console.log(arliRepr(args[0]));
+    }
+    return args[0];
+  }, 1);
   reg('read', (args, ev) => nil, 0);
 
   // Type checking

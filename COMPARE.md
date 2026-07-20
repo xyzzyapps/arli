@@ -1,4 +1,4 @@
-# arli Compared: What's There, What's Missing
+﻿# arli Compared: What's There, What's Missing
 
 ## The Design Philosophy
 
@@ -10,9 +10,9 @@ Before the comparison, let's state the principle explicitly:
 
 This means "missing" features fall into three categories:
 
-1. **Core should have it** — essential for any language backend
-2. **Base language already provides it** — no need to add to core
-3. **Macro / library territory** — can be added without touching core
+1. **Core should have it** â€” essential for any language backend
+2. **Base language already provides it** â€” no need to add to core
+3. **Macro / library territory** â€” can be added without touching core
 
 ---
 
@@ -42,11 +42,10 @@ This means "missing" features fall into three categories:
 |---------|---------|--------|-------|-----|---------|
 | nil / false / true | Yes | Yes | Yes | **Yes** | Present |
 | cons / car / cdr / list | Yes | Yes | Yes | **Yes** | Present |
-| Vectors `[a b c]` | Yes | Yes | Yes | **No** | `python "[1 2 3]"` |
-| Maps `{:a 1}` | Yes | Yes | Yes | **No** | `python "{'a': 1}"` |
+| Vectors `[a b c]` | Yes | Yes | Yes | **Yes** | `[1 2 3]` expands to `(list 1 2 3)` |
+| Maps `{:a 1}` | Yes | Yes | Yes | **Yes** | `{:a 1}` expands to `(hash-map :a 1)` |
 | Sets `#{1 2}` | Yes | Yes | Yes | **No** | `python "{1, 2}"` |
-| Keywords `:foo` | Yes | Yes | Yes | **No** | Strings suffice |
-| **Sequence abstraction** | Yes | partial | Yes | **No** | Python iterators |
+| Keywords `:foo` | Yes | Yes | Yes | **Yes** | Self-evaluating `:keyword` symbols || **Sequence abstraction** | Yes | partial | Yes | **No** | Python iterators |
 | **Lazy sequences** | Yes | No | Yes | **No** | Python generators |
 | **Destructuring** | Yes | Yes | Yes | **No** | **Nice-to-have** |
 
@@ -97,7 +96,7 @@ This means "missing" features fall into three categories:
 |---------|---------|--------|-------|-----|---------|
 | **Macros** | Yes | Yes | Yes | **No** | **Design decision** |
 | Eval / read | Yes | Yes | Yes | **python** | Python's eval |
-| Docstrings | Yes | Yes | No | **No** | Would be nice |
+| Docstrings | Yes | Yes | No | **Yes** | `doc` and `doc!` builtins |
 
 ---
 
@@ -121,14 +120,14 @@ error as argument. Or arity 3 for try/catch/finally.
 
 ### 2. DESIGN DECISION: Macros
 
-arli doesn't have macros. This is intentional — macros require a separate
+arli doesn't have macros. This is intentional â€” macros require a separate
 compile phase, which conflicts with arli's interleaved parse-eval model
 (where each expression is parsed and evaluated immediately).
 
 However, you can achieve similar things via:
 
 - **Python functions** that return S-expressions: `python "make_expression()"`
-- **The `python` special form**: evaluate arbitrary code at compile time
+- **The `host` special form**: evaluate arbitrary code at compile time
 - **The `.` operator**: chain Python functions freely
 
 For example, a threading macro equivalent in arli:
@@ -138,7 +137,7 @@ For example, a threading macro equivalent in arli:
 ;; Just write:
 g f x 1 2
 
-;; Wait — that's wrong. Threading re-orders arguments.
+;; Wait â€” that's wrong. Threading re-orders arguments.
 ;; With arity-driven syntax, threading is less necessary because
 ;; composition is already flat:
 + 1 * 2 3    ;; = (+ 1 (* 2 3)) -- no nesting needed!
@@ -155,7 +154,7 @@ partially because `car` and `cdr` are trivially accessible. Python destructuring
 is available:
 
 ```clojure
-python "a, b = [1, 2]; a"   ;; → 1
+python "a, b = [1, 2]; a"   ;; â†’ 1
 ```
 
 ### 4. NOT A GAP: Data Structure Literals
@@ -194,8 +193,8 @@ that other Lisps force you to do mentally.
 |----------|---------|-------|--------|
 | **HIGH** | `try` / `catch` / `throw` | 2 / 1 | Every backend needs error handling |
 | MEDIUM | `->` threading builtin | 2 | Complements arity syntax |
-| LOW | Destructuring | — | Ergonomic sugar |
-| FUTURE | Macros | — | Requires compile phase |
+| LOW | Destructuring | â€” | Ergonomic sugar |
+| FUTURE | Macros | â€” | Requires compile phase |
 
 ## Future Backends (Go / C)
 
@@ -209,12 +208,12 @@ The architecture already supports this division:
 - ArityTable
 
 **Backend-specific** (swap Python for Go/C):
-- Evaluator (`_eval_expr`) — walks AST, applies rules
-- Builtins — reimplemented per backend
-- I/O — platform I/O
-- Module loading — `import foo` in Go loads Go module, etc.
-- `.` operator — `getattr` in Python, reflection in Go/C
-- `python` special form → `goeval` / `ceval`
+- Evaluator (`_eval_expr`) â€” walks AST, applies rules
+- Builtins â€” reimplemented per backend
+- I/O â€” platform I/O
+- Module loading â€” `import foo` in Go loads Go module, etc.
+- `.` operator â€” `getattr` in Python, reflection in Go/C
+- `host` special form → host eval
 
 The key is that the **Parser** and **AST** are completely language-agnostic.
 They produce nested Python lists (which could be JSON or protobuf for other

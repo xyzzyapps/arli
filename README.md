@@ -1,6 +1,6 @@
-# arli
+﻿# arli
 
-**arli** (Hy + Arity) is a Forth-like Lisp dialect that eliminates parentheses through arity-driven parsing. If the number of arguments a function takes is known, you don't need parentheses. When arity is unknown (variadic), use parentheses as usual.
+**arli** (Arity-driven Lisp) is a Forth-like Lisp dialect that eliminates parentheses through arity-driven parsing. If the number of arguments a function takes is known, you don't need parentheses. When arity is unknown (variadic), use parentheses as usual.
 
 ## Quick Example
 
@@ -9,7 +9,7 @@
 ;; arli (arity-driven, no parens):
 + 1 * 2 3         ;; => 7
 
-;; Define a function — no parens needed (defn=3, fn=2)
+;; Define a function â€” no parens needed (defn=3, fn=2)
 defn add (x y) + x y
 add 1 2           ;; => 3  (add has arity 2)
 
@@ -29,7 +29,7 @@ print fib 10      ;; prints 55
 - **Arity-driven syntax**: Functions with known arity don't need parentheses
 - **Stack-based evaluation**: Forth-like data stack with `dup`, `swap`, `drop`, `over`, `rot`, `pick`, `roll`
 - **Stack reflection**: Capture and replace the data stack with `stack`/`stack!` for metaprogramming
-- **Exec stack (Push-style)**: Self-modifying code via `exec-stack`, `exec!`, `exec-push`, `(exec)` — the exec stack IS the call stack
+- **Exec stack (Push-style)**: Self-modifying code via `exec-stack`, `exec!`, `exec-push`, `(exec)` â€” the exec stack IS the call stack
 - **Lisp semantics**: S-expressions, lexical scoping, closures, first-class functions
 - **Vector/Map literals**: `[1 2 3]` and `{:key val}` syntax
 - **Keywords**: Self-evaluating `:keyword` symbols
@@ -41,7 +41,7 @@ print fib 10      ;; prints 55
 - **Docstrings**: Documentation system via `(doc symbol "text")`
 - **Testing**: `(assert expr message)` for inline tests
 - **Module system**: `(import-module "path.arli")` for loading files
-- **Python interop**: Use any Python library via `import`, `import!`, `.`, or `python`
+- **Python interop**: Use any Python library via `import`, `import!`, `.`, or `host`
 - **Go backend**: Compiled Go binary with Go standard library access
 - **Unicode symbols**: Greek, Cyrillic, Chinese, math symbols as function names
 - **REPL**: Interactive with stack inspection, debug mode, multi-line input
@@ -72,8 +72,35 @@ python -m arli examples/fizzbuzz.arli
 python -m arli -e "+ 1 2"
 ```
 
-## Syntax Guide
+### JavaScript Backend
+```bash
+cd js/arli
+node src/main.js              # REPL
+node src/main.js file.arli    # Run file
+node src/main.js -e "+ 1 2"   # Evaluate expression
+node tests/run_tests.js       # Run test suite
+```
 
+### Browser (ES Module)
+
+```html
+<script type="module">
+  import { Evaluator, arliRepr } from './js/arli/src/arli-browser.js';
+  const ev = new Evaluator();
+  ev.exec('+ 1 2');
+  console.log(arliRepr(ev.stack.pop())); // 3
+
+  // Access browser APIs via host special form
+  ev.exec('host "document.title"');       // returns the page title
+  ev.exec('. document querySelector "h1"');
+
+  // Import ESM modules via dynamic import()
+  ev.exec('import lodash');  // fire-and-forget, module arrives when resolved
+  ev.exec('import! "https://cdn.skypack.dev/lodash" _');
+</script>
+```
+
+## Syntax Guide
 ### No parentheses needed (all have known arity)
 ```clojure
 + 1 2              ;; arithmetic
@@ -123,7 +150,7 @@ roll 1 42 1  ;; -> swaps:                 stack [1, 42]
 Capture, inspect, and replace the data stack:
 
 ```clojure
-stack              ;; -> ()       — push a copy of the current stack as a list
+stack              ;; -> ()       â€” push a copy of the current stack as a list
 stack! (list 1 2 3) ;; -> replaces entire stack with [1, 2, 3]
 stack! nil         ;; -> clears the stack
 ```
@@ -147,10 +174,10 @@ exec-step             ;; pop and evaluate one form from exec stack
 
 ### F-Expressions (Custom Control Flow)
 
-Define functions that **don't evaluate their arguments eagerly** — use `defn-fexpr` (arity 3) and `eval` (arity 1):
+Define functions that **don't evaluate their arguments eagerly** â€” use `defn-fexpr` (arity 3) and `eval` (arity 1):
 
 ```clojure
-;; Custom if — no parens needed (arity 3)
+;; Custom if â€” no parens needed (arity 3)
 defn-fexpr my-if (c t e)
     if (eval c) (eval t) (eval e)
 
@@ -173,7 +200,7 @@ show + 1 * 2 3          ;; returns raw AST, not 7
 `defn-fexpr` works like `defn` (arity 3): `defn-fexpr name (params) body`.  
 `eval` evaluates a raw form in the current environment. Bodies with multiple expressions use `(do ...)`.
 
-**Caveat**: Parameter names must not match registered operator names (e.g., avoid `cond`, `list`, `not` as parameter names — they have arity and consume extra tokens).
+**Caveat**: Parameter names must not match registered operator names (e.g., avoid `cond`, `list`, `not` as parameter names â€” they have arity and consume extra tokens).
 
 ## Complete Arity Table
 
@@ -198,7 +225,7 @@ Every operator has a documented arity. Arity >= 0 = no parens needed. Arity -1 =
 | `import` | 1 | `import os` |
 | `import!` | 2 | `import! os myos` |
 | `.` | 2+ | `. os sep` / `(. os path join "a" "b")` |
-| `python` | 1 | `python "repr(42)"` |
+| `host` | 1 | `host "repr(42)"` |
 | `assert` | 2 | `(assert expr message)` |
 | `doc` | 1 | `doc add` | Retrieve documentation |
 | `doc!` | 2 | `doc! add "text"` | Store documentation |

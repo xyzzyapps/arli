@@ -46,7 +46,7 @@ export class Evaluator {
     this.arityTable.register('import', 1);
     this.arityTable.register('import!', 2);
     this.arityTable.register('.', 2);
-    this.arityTable.register('python', 1);
+    this.arityTable.register('host', 1);
     this.arityTable.register('assert', 2);
     this.arityTable.register('doc', 1);
     this.arityTable.register('doc!', 2);
@@ -217,14 +217,27 @@ export class Evaluator {
         if (nameTok instanceof ArliSymbol) moduleName = nameTok.name;
         else if (typeof nameTok === 'string') moduleName = nameTok;
         else throw new TypeError(`import expects a symbol or string, got ${nameTok}`);
+        // Node: sync require(). Browser: fire dynamic import(), module available when resolved.
         try {
-          const mod = require(moduleName);
           let name = moduleName;
           if (head.name === 'import!' && expr.length >= 3 && expr[2] instanceof ArliSymbol) name = expr[2].name;
-          this.env.define(name, mod);
-          return mod;
+          let mod;
+          if (typeof require !== 'undefined') {
+            mod = require(moduleName);
+            this.env.define(name, mod);
+            return mod;
+          } else {
+            // Browser ESM: dynamic import() — returns a Promise.
+            // We return a loading marker; the real module replaces it when resolved.
+            const marker = { __module__: moduleName, __loading__: true };
+            this.env.define(name, marker);
+            import(moduleName)
+              .then(m => { this.env.define(name, m); })
+              .catch(() => { /* import failed, marker remains */ });
+            return marker;
+          }
         } catch (e) {
-          const marker = { __module__: moduleName };
+          const marker = { __module__: moduleName, __error__: e.message };
           let name = moduleName;
           if (head.name === 'import!' && expr.length >= 3 && expr[2] instanceof ArliSymbol) name = expr[2].name;
           this.env.define(name, marker);
@@ -250,16 +263,16 @@ export class Evaluator {
         return obj;
       }
 
-      if (head instanceof ArliSymbol && head.name === 'python') {
-        if (expr.length < 2) throw new SyntaxError('python expects (python "code")');
+      if (head instanceof ArliSymbol && head.name === 'host') {
+        if (expr.length < 2) throw new SyntaxError('host expects (host "code")');
         const code = expr[1];
         if (typeof code === 'string') {
           try {
             const fn = new Function(...Object.keys(this.globalEnv._bindings), `return ${code}`);
             return fn(...Object.values(this.globalEnv._bindings));
-          } catch (e) { throw new Error(`JS eval error: ${e.message}`); }
+          } catch (e) { throw new Error(`Host eval error: ${e.message}`); }
         }
-        throw new TypeError(`python expects a string, got ${typeof code}`);
+        throw new TypeError(`host expects a string, got ${typeof code}`);
       }
 
       if (head instanceof ArliSymbol && head.name === 'assert') {
@@ -305,10 +318,7 @@ export class Evaluator {
         if (expr.length < 2) throw new SyntaxError('import-module expects (import-module "path")');
         const path = this._evalExpr(expr[1]);
         if (typeof path === 'string') {
-          const fs = require('fs'), pathModule = require('path');
-          const fullPath = pathModule.resolve(path);
-          if (!fs.existsSync(fullPath)) throw new Error(`Cannot find module: ${path}`);
-          return this.execFile(fullPath);
+          return this.execFile(path);
         }
         throw new TypeError(`import-module expects a string path`);
       }
@@ -394,7 +404,16 @@ export class Evaluator {
   }
 
   execFile(path) {
-    const fs = require('fs');
-    return this.exec(fs.readFileSync(path, 'utf-8'));
+    // Node: sync readFile. Browser: fetch + fire exec async, return nil (result not available yet).
+    if (typeof require !== 'undefined') {
+      const fs = require('fs');
+      return this.exec(fs.readFileSync(path, 'utf-8'));
+    }
+    // Browser: async fetch, execute when available
+    fetch(path)
+      .then(r => { if (!r.ok) throw new Error(`fetch ${path}: ${r.status}`); return r.text(); })
+      .then(source => this.exec(source))
+      .catch(e => { console.error(`import-module error: ${e.message}`); });
+    return nil;
   }
 }

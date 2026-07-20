@@ -1,18 +1,20 @@
 """Tokenizer for arli.
 
 Converts source text into a flat list of tokens.
-Tokens are: numbers, strings, symbols, and punctuation ().
+Tokens are: numbers, strings, symbols, and punctuation ()[]{}.
 """
 
 from __future__ import annotations
 from typing import Optional
+import unicodedata
 
-# ---------------------------------------------------------------------------
 # Token types
-# ---------------------------------------------------------------------------
-
 TOKEN_OPEN = "("
 TOKEN_CLOSE = ")"
+TOKEN_VECTOR_OPEN = "["
+TOKEN_VECTOR_CLOSE = "]"
+TOKEN_MAP_OPEN = "{"
+TOKEN_MAP_CLOSE = "}"
 TOKEN_STRING = "STRING"
 TOKEN_NUMBER = "NUMBER"
 TOKEN_SYMBOL = "SYMBOL"
@@ -20,25 +22,18 @@ TOKEN_QUOTE = "'"
 TOKEN_QUASIQUOTE = "`"
 TOKEN_UNQUOTE = ","
 TOKEN_UNQUOTE_SPLICE = ",@"
+TOKEN_KEYWORD = "KEYWORD"
 
-Token = tuple[str, str | int | float]  # (type, value)
+Token = tuple[str, str | int | float]
 
-
-# ---------------------------------------------------------------------------
-# Tokenizer
-# ---------------------------------------------------------------------------
-
-import unicodedata
 
 def _is_symbol_start(ch: str) -> bool:
-    """Check if a character can start a symbol name.
-    Accepts letters, Unicode symbols (math, currency, etc.),
-    and ASCII symbol characters."""
+    """Check if a character can start a symbol name."""
     if ch.isalpha() or ch.isidentifier():
         return True
     try:
         cat = unicodedata.category(ch)
-        if cat.startswith('S'):  # Symbol categories: Sm, Sc, Sk, So
+        if cat.startswith('S'):
             return True
     except ValueError:
         pass
@@ -46,16 +41,6 @@ def _is_symbol_start(ch: str) -> bool:
 
 
 def tokenize(source: str) -> list[Token]:
-    """Tokenize arli source code into a list of tokens.
-
-    Handles:
-    - integers and floats (including negative via '-')
-    - double-quoted strings with escape sequences
-    - symbols, including '->', '...', etc.
-    - parentheses () for grouping unknown-arity expressions
-    - line comments starting with ';'
-    - quote shorthand 'x for (quote x)
-    """
     tokens: list[Token] = []
     i = 0
     length = len(source)
@@ -68,19 +53,35 @@ def tokenize(source: str) -> list[Token]:
             i += 1
             continue
 
-        # Line comments
+        # Comments
         if ch == ';':
             while i < length and source[i] not in '\n\r':
                 i += 1
             continue
 
-        # Parentheses
+        # Brackets
         if ch == '(':
             tokens.append((TOKEN_OPEN, '('))
             i += 1
             continue
         if ch == ')':
             tokens.append((TOKEN_CLOSE, ')'))
+            i += 1
+            continue
+        if ch == '[':
+            tokens.append((TOKEN_VECTOR_OPEN, '['))
+            i += 1
+            continue
+        if ch == ']':
+            tokens.append((TOKEN_VECTOR_CLOSE, ']'))
+            i += 1
+            continue
+        if ch == '{':
+            tokens.append((TOKEN_MAP_OPEN, '{'))
+            i += 1
+            continue
+        if ch == '}':
+            tokens.append((TOKEN_MAP_CLOSE, '}'))
             i += 1
             continue
 
@@ -137,14 +138,27 @@ def tokenize(source: str) -> list[Token]:
             tokens.append((TOKEN_STRING, ''.join(s)))
             continue
 
+        # Keywords (:keyword)
+        if ch == ':':
+            start = i
+            i += 1
+            if i < length and (source[i].isalpha() or source[i] in '_!$%&*./<=>?@^~'):
+                while i < length:
+                    c = source[i]
+                    if c in ' \t\n\r()[]{}"\'`;,':
+                        break
+                    i += 1
+                tokens.append((TOKEN_KEYWORD, source[start:i]))
+            else:
+                tokens.append((TOKEN_SYMBOL, ':'))
+            continue
+
         # Numbers and symbols
         start = i
         if ch == '-':
-            # Check if next char is a digit — negative number
             if i + 1 < length and source[i + 1].isdigit():
                 i += 1
             else:
-                # It's a symbol starting with '-' (like '->')
                 pass
         elif ch == '+':
             if i + 1 < length and source[i + 1].isdigit():
@@ -154,21 +168,17 @@ def tokenize(source: str) -> list[Token]:
         elif _is_symbol_start(ch):
             pass
         else:
-            # Skip unknown character
             i += 1
             continue
 
-        # Read the full token
         while i < length:
             c = source[i]
-            if c in ' \t\n\r()"\'`;,':
+            if c in ' \t\n\r()[]{}"\'`;,':
                 break
             i += 1
         token_str = source[start:i]
 
-        # Try to parse as number
         if token_str.startswith('-') and len(token_str) == 1:
-            # Just '-', treat as symbol
             tokens.append((TOKEN_SYMBOL, '-'))
         elif token_str.startswith('+') and len(token_str) == 1:
             tokens.append((TOKEN_SYMBOL, '+'))
@@ -183,7 +193,6 @@ def tokenize(source: str) -> list[Token]:
 
 
 def _parse_number(s: str) -> Optional[int | float]:
-    """Try to parse a number. Returns None if not a valid number."""
     try:
         if '.' in s:
             return float(s)
@@ -191,10 +200,6 @@ def _parse_number(s: str) -> Optional[int | float]:
     except (ValueError, TypeError):
         return None
 
-
-# ---------------------------------------------------------------------------
-# Token stream helper
-# ---------------------------------------------------------------------------
 
 class TokenStream:
     """A stream of tokens with position tracking."""

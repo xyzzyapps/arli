@@ -79,6 +79,10 @@ class Evaluator:
         self.arity_table.register("import!", 2)  # import! module alias
         self.arity_table.register(".", 2)        # . obj attr
         self.arity_table.register("python", 1)   # python "code"
+        self.arity_table.register("assert", 2)     # assert expr message
+        self.arity_table.register("doc", 2)        # doc symbol "text"
+        self.arity_table.register("match", -1)     # match expr clause...
+        self.arity_table.register("import-module", 1)  # import-module "path"
 
     def eval(self, expr: Any) -> Any:
         """Evaluate a single expression and return the result.
@@ -112,6 +116,9 @@ class Evaluator:
         # Symbol: look up in environment (handle special constants)
         if isinstance(expr, Symbol):
             name = expr.name
+            # Keywords self-evaluate
+            if name.startswith(':'):
+                return expr
             # Built-in constants
             if name == "nil":
                 return nil
@@ -123,7 +130,6 @@ class Evaluator:
             if val is None:
                 raise NameError(f"Undefined symbol: {name}")
             return val
-
         # List: S-expression application
         if isinstance(expr, list):
             if not expr:
@@ -394,6 +400,65 @@ class Evaluator:
                 raise TypeError(
                     f"python expects a string, got {type(code)}")
 
+            # ASSERT: (assert expr message)
+            if isinstance(head, Symbol) and head.name == "assert":
+                if len(expr) < 2:
+                    raise SyntaxError("assert expects (assert expr message)")
+                val = self._eval_expr(expr[1])
+                if not is_truthy(val):
+                    msg = ""
+                    if len(expr) >= 3:
+                        msg = self._eval_expr(expr[2])
+                    raise AssertionError(f"Assertion failed: {hya_repr(msg)}")
+                return val
+
+            # DOC: (doc symbol) or (doc symbol "text")
+            if isinstance(head, Symbol) and head.name == "doc":
+                if len(expr) >= 3:
+                    # Storing doc
+                    sym = expr[1]
+                    doc_text = self._eval_expr(expr[2])
+                    if isinstance(sym, Symbol):
+                        self.env.define(f"__doc_{sym.name}", doc_text)
+                        return doc_text
+                elif len(expr) >= 2:
+                    # Retrieving doc
+                    sym = expr[1]
+                    if isinstance(sym, Symbol):
+                        doc_val = self.env.lookup(f"__doc_{sym.name}")
+                        if doc_val is not None:
+                            return doc_val
+                    return nil
+                return nil
+
+            # MATCH: (match expr clause...)
+            if isinstance(head, Symbol) and head.name == "match":
+                if len(expr) < 2:
+                    raise SyntaxError("match expects (match expr clause...)")
+                match_val = self._eval_expr(expr[1])
+                for clause in expr[2:]:
+                    if isinstance(clause, list) and len(clause) >= 2:
+                        pattern = clause[0]
+                        result = clause[1]
+                        if self._match_pattern(pattern, match_val):
+                            return self._eval_expr(result)
+                return nil
+
+            # IMPORT-MODULE: load and execute an .arli file
+            if isinstance(head, Symbol) and head.name == "import-module":
+                if len(expr) < 2:
+                    raise SyntaxError("import-module expects (import-module \"path\")")
+                path = self._eval_expr(expr[1])
+                if isinstance(path, str):
+                    import os
+                    full_path = path
+                    if not os.path.exists(full_path):
+                        full_path = os.path.join(os.path.dirname(os.path.abspath('.')), path)
+                    if os.path.exists(full_path):
+                        return self.exec_file(full_path)
+                    raise FileNotFoundError(f"Cannot find module: {path}")
+                raise TypeError(f"import-module expects a string path")
+
             # ---- Generic function application ----
             if isinstance(head, Symbol) and head.name == "defn-rec":
                 # Same as defn but the function body can recurse
@@ -427,6 +492,16 @@ class Evaluator:
 
         raise TypeError(f"Unknown expression type: {type(expr)}: {expr}")
 
+    def apply(self, fn: Any, args: list) -> Any:
+        """Apply a function (builtin, user-defined, or callable) to args."""
+        if isinstance(fn, Builtin):
+            return fn(*args, evaluator=self)
+        if isinstance(fn, Function):
+            return self._apply_function(fn, args)
+        if callable(fn):
+            return fn(*args)
+        raise TypeError(f"Cannot call non-function: {hya_repr(fn)}")
+
     def _apply_function(self, fn: Function, args: list) -> Any:
         """Apply a user-defined function with given arguments.
 
@@ -458,6 +533,28 @@ class Evaluator:
                 return self._eval_expr(fn.body)
         finally:
             self.env = old_env
+
+    def _match_pattern(self, pattern: Any, value: Any) -> bool:
+        """Simple pattern matching for match form.
+        - Symbol _ matches anything
+        - A list matches if each element matches
+        - Literals match by equality"""
+        if isinstance(pattern, Symbol):
+            if pattern.name == "_":
+                return True
+            # Symbols match by name equality
+            if isinstance(value, Symbol):
+                return pattern.name == value.name
+            return False
+        if isinstance(pattern, list) and isinstance(value, list):
+            if len(pattern) != len(value):
+                return False
+            for p, v in zip(pattern, value):
+                if not self._match_pattern(p, v):
+                    return False
+            return True
+        # Literal matching
+        return pattern == value
 
     def exec(self, source: str) -> Any:
         """Parse and evaluate arli source code.

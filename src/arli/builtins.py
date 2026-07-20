@@ -317,6 +317,54 @@ def get_builtins() -> dict[str, Builtin]:
     reg(".", _pr, 1)
     reg("read", _read, 0)
 
+    # Sequence operations (fixed arity: individual args)
+    def _map(fn, lst, evaluator=None):
+        if not isinstance(lst, list):
+            return lst
+        if evaluator is None:
+            return lst
+        result = []
+        for x in lst:
+            result.append(evaluator._eval_expr([Symbol("_"), fn, x]) if isinstance(fn, Symbol) else evaluator.apply(fn, [x]))
+        return result
+    def _filter(fn, lst, evaluator=None):
+        if not isinstance(lst, list):
+            return lst
+        if evaluator is None:
+            return lst
+        result = []
+        for x in lst:
+            val = evaluator.apply(fn, [x])
+            if is_truthy(val):
+                result.append(x)
+        return result
+    def _reduce(fn, init, lst, evaluator=None):
+        if not isinstance(lst, list) or not lst:
+            return init
+        if evaluator is None:
+            return init
+        acc = init
+        for x in lst:
+            acc = evaluator.apply(fn, [acc, x])
+        return acc
+    reg("map", _map, 2)
+    reg("filter", _filter, 2)
+    reg("reduce", _reduce, 3)
+
+    # Hash-map creation
+    def make_hash_map(*pairs, evaluator=None):
+        result = {}
+        for i in range(0, len(pairs), 2):
+            if i + 1 < len(pairs):
+                key = pairs[i]
+                val = pairs[i + 1]
+                if isinstance(key, Symbol):
+                    result[key.name] = val
+                else:
+                    result[str(key)] = val
+        return result
+    reg("hash-map", make_hash_map, -1)
+
     # Type checking
     reg("number?", _is_number, 1)
     reg("string?", _is_string, 1)

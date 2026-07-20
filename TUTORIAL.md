@@ -153,22 +153,26 @@ arli> quote + 1 2
 
 Instead of computing `+ 1 2` (which would be `3`), `quote` returns the expression itself. This is how we work with code as data.
 
-#### do: Sequencing
+#### do: Sequencing (Variadic)
 
-`do` has arity 2. It evaluates two expressions and returns the second:
+`do` is variadic — it takes any number of expressions and returns the last. Because it's variadic, you use parentheses:
 
 ```
-arli> do print "hello" + 1 2
+arli> (do print "hello" + 1 2)
 "hello"
 3
 ```
 
-The first expression `print "hello"` prints "hello" as a side effect. The second expression `+ 1 2` produces `3`, which becomes the result of the `do`.
+The first expression `print "hello"` prints "hello" as a side effect. The second expression `+ 1 2` produces `3`, which becomes the result of the `do`. The parentheses tell the parser where the `do` block starts and ends.
 
-If you need to sequence more than two expressions, chain them: `do a do b c`. Or use parentheses: `(do a b c)` — inside parentheses, the `do` handler processes all expressions.
+You can chain as many expressions as you need:
 
-I know, I know — this looks weird at first. But it's consistent with the rule: every operator has a fixed arity. You'll get used to it.
-
+```
+arli> (do print 1 print 2 print 3)
+1
+2
+3
+```
 #### while: Looping
 
 `while` has arity 2. It takes a condition and a body:
@@ -176,7 +180,7 @@ I know, I know — this looks weird at first. But it's consistent with the rule:
 ```
 arli> define i 0
 0
-arli> while (< i 5) do print i set! i + i 1
+arli> while (< i 5) (do print i set! i + i 1)
 0
 1
 2
@@ -184,8 +188,7 @@ arli> while (< i 5) do print i set! i + i 1
 4
 ```
 
-The `while` evaluates the condition `(< i 5)`. If truthy, it evaluates the body `(do print i set! i + i 1)`. The `do` sequences two expressions: print the current value of `i`, then increment it. This repeats until `i` reaches `5`.
-
+The `while` evaluates the condition `(< i 5)`. If truthy, it evaluates the body `(do print i set! i + i 1)`. The `do` block sequences two expressions: print the current value of `i`, then increment it. This repeats until `i` reaches `5`.
 #### let: Local Bindings
 
 `let` has arity 2. It takes a bindings list and a body:
@@ -338,19 +341,23 @@ These stack operations are the building blocks of concatenative programming. Ins
 
 #### defn: The Standard Way
 
-To define a function, use `defn`:
+`defn` has arity 3, so you can use it without parentheses:
 
 ```
-arli> (defn add (x y) (+ x y))
-<fn add arity=2>
+arli> defn add (x y) + x y
+<fn add>
 arli> add 1 2
 3
 ```
 
-The syntax is `(defn name (params) body...)`. The parentheses around the whole form are necessary because `defn` has an unknown structure (it takes a name, a parameter list, and a body). But inside, everything is arity-driven.
+The syntax is `defn name (params) body` — three arguments: a name, a parameter list, and a single body expression. If you need multiple body expressions, use an explicit `(do ...)` block:
+
+```
+arli> defn add (x y) (do print "adding" + x y)
+<fn add>
+```
 
 When you define `add` with parameters `(x y)`, arli registers `add` with arity 2. From that point on, `add 1 2` works without parentheses — the parser knows `add` needs two arguments and consumes them automatically.
-
 #### defn-rec: Recursive Functions
 
 For recursive functions, use `defn-rec`:
@@ -472,7 +479,83 @@ This is the power of arli: Lisp-like syntax with Forth-like stack semantics and 
 
 ---
 
-### Chapter 6: The Stack in Practice
+### Chapter 6: Using Go From arli
+
+Arli also runs on **Go** (`go/arli/`). The Go backend gives you access to Go's standard library through the same `.` operator.
+
+#### Pre-registered Packages
+
+The Go backend comes with commonly used packages pre-loaded:
+
+```
+arli> import fmt
+<Go struct { Println func(...interface {}) (int, error); ... }>
+arli> (. fmt Println "hello from Go!")
+[hello from Go!]
+```
+
+Other available packages: `math`, `strings`, `os`.
+
+#### Calling Go Functions
+
+```
+arli> import strings
+arli> (. strings ToUpper "hello")
+"HELLO"
+arli> (. strings Join (list "a" "b" "c") ", ")
+"a, b, c"
+```
+
+#### Using Go's Math
+
+```
+arli> import math
+arli> . math Pi
+3.141592653589793
+```
+
+#### Running the Go Backend
+
+```
+# Build the binary
+cd go/arli
+go build -o arli.exe .
+
+# Run a file
+./arli.exe myfile.hya
+
+# REPL
+./arli.exe
+```
+
+#### Adding a New Go Package
+
+To add a new Go package, edit `go/arli/eval.go` and add it to the `goPackages` map:
+
+```go
+func init() {
+    goPackages["fmt"] = fmtPackage
+    goPackages["strings"] = stringsPackage
+    goPackages["myapp"] = myappPackage  // Your custom package
+}
+```
+
+Then define the package struct with the functions you want to expose.
+
+#### Python vs Go Backend
+
+| Feature | Python Backend | Go Backend |
+|---------|---------------|------------|
+| Run | `python -m arli` | `./arli.exe` |
+| Speed | Interpreted | Compiled |
+| Ecosystem | Any Python library | Pre-registered Go packages |
+| Dynamic eval | `python "code"` | `go "code"` (placeholder) |
+| Package loading | `import os` (dynamic) | Pre-registered only |
+| Extension | Write Python + register | Write Go + rebuild |
+
+---
+
+### Chapter 7: The Stack in Practice
 
 Now let's see how the stack influences real code organization. Here's a Fibonacci function written two ways:
 
@@ -500,7 +583,7 @@ The key insight is that **arity-driven parsing** and **stack-based evaluation** 
 
 ---
 
-### Chapter 7: How It All Works
+### Chapter 8: How It All Works
 
 Let me pull back the curtain and show you how arli works internally.
 
@@ -551,7 +634,7 @@ The `python` special form uses Python's `eval()` function with the current arli 
 
 ---
 
-### Chapter 8: Where To Go From Here
+### Chapter 9: Where To Go From Here
 
 You now know enough to write real programs in arli. Here's what I'd suggest:
 

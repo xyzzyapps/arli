@@ -55,7 +55,7 @@ class Parser:
         if tt == TOKEN_MAP_OPEN:
             return self._parse_map_literal(stream)
         if tt == TOKEN_QUOTE:
-            stream.next(); expr = self._parse_expr(stream, True)
+            stream.next(); expr = self._parse_expr(stream, False)
             return [Symbol("quote"), expr]
         if tt == TOKEN_QUASIQUOTE:
             stream.next(); expr = self._parse_expr(stream, True)
@@ -97,14 +97,21 @@ class Parser:
         stream.expect(TOKEN_OPEN)
         items: list[Any] = []
         is_first = True
+        # When the first element is quote, disable arity expansion for all
+        # subsequent elements (so '(+ 1 2) parses without + consuming args)
+        quoted_form = False
         while True:
             tok = stream.peek()
             if tok is None:
                 raise SyntaxError("Unclosed parenthesis")
             if tok[0] == TOKEN_CLOSE:
                 stream.next(); break
-            expr = self._parse_expr(stream, not is_first)
+            allow_arity = not is_first and not quoted_form
+            expr = self._parse_expr(stream, allow_arity)
             if expr is not None:
+                # After parsing the first element, check if it's 'quote'
+                if is_first and isinstance(expr, Symbol) and expr.name == 'quote':
+                    quoted_form = True
                 if (is_first and isinstance(expr, list) and len(expr) > 0
                         and isinstance(expr[0], Symbol) and expr[0].name == 'defn'
                         and stream.peek() is not None and stream.peek()[0] == TOKEN_CLOSE):

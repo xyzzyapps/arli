@@ -40,6 +40,8 @@ class Evaluator:
 
     def __init__(self, debug: bool = False) -> None:
         self.stack: list[Any] = []
+        self.exec_stack: list[Any] = []   # Push-style exec stack for self-modifying code
+        self.env_stack: list[Any] = []    # Environment stack for function calls in Push mode
         self.global_env = Environment(name="global")
         self.env = self.global_env
         self.arity_table = ArityTable()

@@ -1,0 +1,5 @@
+;; Stack reflection: stack captures the current stack
+;;
+;; test: stack on empty evaluator returns empty list
+stack
+;; expect: ()

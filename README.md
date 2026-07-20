@@ -27,7 +27,9 @@ print fib 10      ;; prints 55
 ## Key Features
 
 - **Arity-driven syntax**: Functions with known arity don't need parentheses
-- **Stack-based evaluation**: Forth-like data stack with `dup`, `swap`, `drop`, `over`, `rot`
+- **Stack-based evaluation**: Forth-like data stack with `dup`, `swap`, `drop`, `over`, `rot`, `pick`, `roll`
+- **Stack reflection**: Capture and replace the data stack with `stack`/`stack!` for metaprogramming
+- **Exec stack (Push-style)**: Self-modifying code via `exec-stack`, `exec!`, `exec-push`, `(exec)` — the exec stack IS the call stack
 - **Lisp semantics**: S-expressions, lexical scoping, closures, first-class functions
 - **Vector/Map literals**: `[1 2 3]` and `{:key val}` syntax
 - **Keywords**: Self-evaluating `:keyword` symbols
@@ -116,6 +118,33 @@ pick 1 42 1  ;; -> copies 1 (index 1):   stack [42, 1, 1]
 roll 1 42 1  ;; -> swaps:                 stack [1, 42]
 ```
 
+### Stack Reflection
+
+Capture, inspect, and replace the data stack:
+
+```clojure
+stack              ;; -> ()       — push a copy of the current stack as a list
+stack! (list 1 2 3) ;; -> replaces entire stack with [1, 2, 3]
+stack! nil         ;; -> clears the stack
+```
+
+### Exec Stack (Push-style Self-Modifying Code)
+
+The exec stack holds pending code. Manipulate it from within executing code:
+
+```clojure
+exec-push (quote +)   ;; push a function symbol onto exec stack
+exec-push 2           ;; push arguments (become data via (exec))
+exec-push 1
+(exec)                ;; process exec stack: 1->data, 2->data, + pops 2->3
+
+exec-stack            ;; push a copy of the exec stack to data stack
+exec! (list ...)      ;; replace the entire exec stack
+exec-pop              ;; pop top of exec stack to data stack
+exec-depth            ;; push exec stack depth
+exec-step             ;; pop and evaluate one form from exec stack
+```
+
 ### F-Expressions (Custom Control Flow)
 
 Define functions that **don't evaluate their arguments eagerly** — use `defn-fexpr` (arity 3) and `eval` (arity 1):
@@ -186,6 +215,8 @@ Every operator has a documented arity. Arity >= 0 = no parens needed. Arity -1 =
 | Comparison | `=`(2) `<`(2) `>`(2) `<=`(2) `>=`(2) `!=`(2) |
 | Logic | `and`(-1) `or`(-1) `not`(1) |
 | Stack | `dup`(1) `swap`(2) `drop`(1) `over`(2) `rot`(3) `nip`(2) `tuck`(2) `pick`(1) `roll`(1) |
+| Reflection | `stack`(0) `stack!`(1) |
+| Exec Stack | `exec-stack`(0) `exec!`(1) `exec-push`(1) `exec-pop`(0) `exec-depth`(0) `exec-step`(0) `(exec)`(-1) |
 | Lists | `cons`(2) `car`(1) `cdr`(1) `list`(-1) `nil?`(1) `list?`(1) |
 | Sequences | `map`(2) `filter`(2) `reduce`(3) |
 | Data | `hash-map`(-1) |

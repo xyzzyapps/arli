@@ -879,49 +879,94 @@ Then define the package struct with the functions you want to expose.
 
 ### Chapter 9: The Stack in Practice
 
-Now let's see how the stack influences real code organization. Here's a Fibonacci function written two ways:
-
-**With variables (Lisp style)**:
-```clojure
-(defn fib-iter (n)
-    (let ((a 0) (b 1) (i 0))
-        (while (< i n)
-            (let ((temp b))
-                (do
-                    (set! b + a b)
-                    (set! a temp)
-                    (set! i + i 1))))
-        a))
-```
-
-**With stack operations (Forth style)**:
-```clojure
-;; Compute a * (b + c) using only stack words
-;; Stack: (a b c)
-over      ;; (a b c a)
-rot       ;; (b c a a)
-rot       ;; (c a a b)
-drop      ;; (c a a)  — wait, this discards c
-;; Better approach:
-;; push b, then a, compute a + b, then multiply by result
-swap dup  ;; (a c b c)  — save c for later multiplication  
-rot       ;; (c b a c)
-+         ;; (c b+a)    — compute a + b
-*         ;; ((b+a)*c)  — multiply by c
-```
-
-The stack style takes some getting used to. The key insight is that **arity-driven parsing** and **stack-based evaluation** are two sides of the same coin. Arity tells the parser how many arguments a function consumes. The stack is where those arguments live.
-
-For more flexible stack access, arli provides `pick` and `roll`:
+Every expression result in arli is pushed onto an explicit **data stack**. You can inspect it with `/stack`:
 
 ```
-pick n   ;; copy nth element (0=top) to the top: pick 0 = dup, pick 1 = over
-roll n   ;; rotate nth element to the top:    roll 1 = swap, roll 2 = rot
+arli> + 1 2
+3
+arli> * 4 5
+20
+arli> /stack
+Stack (2 items):
+  0: 3
+  1: 20
 ```
-The stack style takes practice. Start with the Lisp style (variables and `let`) — it's familiar. As you get comfortable, you'll find yourself naturally using `dup`, `swap`, and `drop` to move data around without naming everything.
 
-The key insight is that **arity-driven parsing** and **stack-based evaluation** are two sides of the same coin. Arity tells the parser how many arguments a function consumes. The stack is where those arguments live. The parser groups, the evaluator executes, and the stack carries data between them.
+This stack is where results accumulate as expressions are evaluated left to right. It's also where arli's Forth-like stack words operate.
 
+#### Stack Words
+
+arli provides traditional Forth stack words, but with a twist: they take **explicit arguments** (because the parser consumes them according to arity), not implicit values from the stack:
+
+```
+dup a      ;; copy a:                  pushes a, then a
+drop a     ;; discard a:               returns nil
+over a b   ;; copy 2nd arg to top:     pushes a (3rd value)
+```
+
+In the REPL:
+
+```
+arli> dup 5
+5
+arli> /stack
+Stack (2 items):
+  0: 5
+  1: 5
+
+arli> drop 42
+nil
+arli> /stack
+Stack is empty.
+```
+
+#### The Real Stack: Expression Results
+
+In practice, the stack is most useful for **accumulating results** from sequential operations. This is the natural arity-driven style:
+
+```
+arli> * 2 + 3 4       ;; 2 * (3 + 4) = 14
+14
+```
+
+The parser groups this as `* 2 (+ 3 4)`. Inside the evaluator:
+1. `+ 3 4` computes 7, pushes it to the stack
+2. `* 2` pops 2 and the result (7), computes 14, pushes it
+
+Even without explicit stack words, arity-driven parsing **is** the stack style — data flows from inner expressions to outer ones, and results accumulate on the stack naturally.
+
+#### pick and roll
+
+For indexed stack access, arli provides `pick` and `roll`. These are the only stack words that work on values **already on the evaluator's stack** (rather than taking explicit arguments):
+
+```
+pick n   ;; copy nth element (0=top) to the top
+roll n   ;; rotate nth element (0=top) to the top
+```
+
+`pick 0` is like `dup` (copy top), `pick 1` is like `over` (copy 2nd), `roll 1` is like `swap`, `roll 2` is like `rot`.
+
+Since `pick` and `roll` are single-argument words (arity 1), their argument is the **index**, not the data. The data must already be on the stack from preceding expressions:
+
+```
+arli> 42
+42
+arli> pick 0            ;; copy top (index 0) — 42 must be on the stack
+42
+arli> /stack
+Stack (3 items):
+  0: 42
+  1: 42
+  2: 42
+```
+
+Each `pick`/`roll` adds one extra value to the stack (the return value is pushed by the evaluator). Keep this in mind when chaining stack operations.
+
+#### The Key Insight
+
+**arity-driven parsing** and **stack-based evaluation** are two sides of the same coin. Arity tells the parser how many arguments a function consumes. The stack is where those arguments live. The parser groups expressions into trees, and the evaluator walks the tree, pushing intermediate results onto the stack as it goes.
+
+You don't need to actively manage the stack for most code — just write expressions naturally and let arity do the grouping. The stack is always there, accumulating results, ready for inspection with `/stack` when you need to debug or understand the flow.
 ---
 
 ### Chapter 10: How It All Works
@@ -975,7 +1020,339 @@ The `python` special form uses Python's `eval()` function with the current arli 
 
 ---
 
-### Chapter 11: Where To Go From Here
+### Chapter 11: Stack Reflection and Self-Modifying Code
+
+So far, the stack has been a behind-the-scenes mechanism — results accumulate, words like `dup` and `swap` rearrange them, and `/stack` lets you peek. But what if you could **capture the stack as data**, manipulate it with list operations, and put it back? And what if there was a **second stack** — one that holds code instead of data — so programs can rewrite themselves during execution?
+
+This is what arli's **stack reflection** and **exec stack** provide. They're inspired by the [Push programming language](http://faculty.hampshire.edu/lspector/push.html), where programs live on stacks and self-modification is the default.
+
+---
+
+#### 11.1 Data Stack Reflection
+
+Two builtins expose the data stack as a value:
+
+**`stack` (arity 0)** — pushes a *copy* of the current data stack as a list.
+
+```
+arli> 1 2 3
+3
+arli> stack
+(1 2 3)
+arli> /stack
+Stack (4 items):
+  0: 1
+  1: 2
+  2: 3
+  3: (1 2 3)
+```
+
+The snapshot is a regular arli list. You can filter it, map over it, cons to it — anything you can do to a list:
+
+```
+arli> 1 "hello" 2 "world" 3
+3
+arli> stack
+(1 "hello" 2 "world" 3)
+arli> filter number?
+(1 2 3)
+```
+
+**`stack!` (arity 1)** — replaces the entire data stack with a list. Takes the new stack as an argument. Returns `None` (so exec doesn't push an extra value).
+
+```
+arli> stack! (list 10 20 30)
+arli> /stack
+Stack (3 items):
+  0: 10
+  1: 20
+  2: 30
+```
+
+Pass `nil` to clear the stack:
+
+```
+arli> 1 2 3
+3
+arli> stack! nil
+arli> /stack
+Stack is empty.
+```
+
+##### Practical: Filter the Stack In Place
+
+The real power comes from combining `stack` and `stack!`. Capture the current stack, transform it, and replace:
+
+```clojure
+;; Keep only numbers from the current stack
+(let ((s stack))
+    (stack! (filter (fn (x) number? x) s)))
+```
+
+Step by step:
+1. `stack` captures `[1, "hello", 2, "world", 3]` and binds it to `s`
+2. `(filter (fn (x) number? x) s)` keeps only numbers: `[1, 2, 3]`
+3. `stack!` replaces the evaluator's entire stack with `[1, 2, 3]`
+
+---
+
+#### 11.2 The Exec Stack
+
+If the data stack is where *values* live, the **exec stack** is where *code* lives. It's a second stack in the evaluator that holds forms (lists, symbols, literals) waiting to be executed.
+
+The exec stack operations give you direct control over **what runs next**:
+
+| Builtin | Arity | Description |
+|---------|-------|-------------|
+| `exec-stack` | 0 | Push a copy of the exec stack to the data stack |
+| `exec!` | 1 | Replace the exec stack with a list |
+| `exec-push` | 1 | Push a form onto the exec stack |
+| `exec-pop` | 0 | Pop the top of the exec stack to the data stack |
+| `exec-depth` | 0 | Push the exec stack depth to the data stack |
+| `exec-step` | 0 | Pop and evaluate one form from the exec stack |
+| `(exec)` | -1 | Process the entire exec stack until empty |
+
+##### 11.2.1 Pushing and Stepping
+
+`exec-push` puts a form onto the exec stack. `exec-step` pops and evaluates one form:
+
+```
+arli> exec-push (quote (+ 1 2))    ;; push the form (+ 1 2) onto exec stack
+arli> exec-depth                   ;; how many items on exec?
+1
+arli> exec-step                    ;; pop and evaluate (+ 1 2)
+3
+arli> /stack
+Stack (1 items):
+  0: 3
+```
+
+`exec-push` returns `None` (nothing added to data stack). `exec-step` evaluates the form normally and pushes its result to the data stack.
+
+##### 11.2.2 The Push Interpreter: (exec)
+
+`(exec)` is the heart of the Push-style system. It processes the exec stack until empty. For each item popped:
+
+- **If it's a list**: each element is pushed back onto the exec stack in forward order. The first element ends up at the bottom (executed last).
+- **If it's a Symbol**: the function is looked up, arguments are popped from the **data stack** according to the function's arity, and the result is pushed to the data stack.
+- **If it's a literal (number, string, etc.)**: it's pushed directly to the data stack.
+
+This is a fundamentally different execution model from normal arli. Instead of the parser grouping arguments by arity, functions **pull their arguments from the data stack at runtime**.
+
+Here's how Push-style arithmetic works:
+
+```
+;; Push the function symbol, then the arguments, then run
+exec-push (quote +)    ;; push the + symbol (not evaluated)
+exec-push 2            ;; push a literal (goes to data stack via (exec))
+exec-push 1
+(exec)
+```
+
+When `(exec)` runs:
+
+1. Pop `1` → literal → push to data stack → `[1]`
+2. Pop `2` → literal → push to data stack → `[1, 2]`
+3. Pop `+` → Symbol → lookup → Builtin, arity 2 → pop 2 from data stack → `1 + 2 = 3` → push to data stack → `[3]`
+
+Result: `[3]`. This is the same as `+ 1 2` in normal arli, but achieved by pushing code onto the exec stack and letting it run.
+
+Nested expressions work the same way:
+
+```
+;; Compute (1 + 2) * 4 in Push style
+exec-push (quote *)
+exec-push 4
+exec-push (quote +)
+exec-push 2
+exec-push 1
+(exec)
+```
+
+`(exec)` processes: `1` → data, `2` → data, `+` → pop 2 → `3` → data, `4` → data, `*` → pop 2 → `12` → data. Result: `[12]`.
+
+##### 11.2.3 How List Expansion Works
+
+When `(exec)` encounters a list on the exec stack, it expands it by pushing each element back. This means lists act as **program fragments** that get unfolded during execution.
+
+For example, pushing `(quote (+ 1 2))` as a single item:
+
+```
+exec-push (quote (+ 1 2))
+(exec)
+```
+
+`(exec)` pops `(+ 1 2)` (a list), pushes each element back in order: `+`, then `1`, then `2`. Now the exec stack is `[+, 1, 2]` with `2` on top. Processing continues normally: `2` → data, `1` → data, `+` → pop 2 → `3`.
+
+You can build lists dynamically and execute them:
+
+```
+;; Build a program at runtime and run it
+(let ((prog (list (quote +) 1 2)))
+    (exec! (list prog))      ;; put it on the exec stack as a single item
+    (exec))                  ;; run it
+```
+
+##### 11.2.4 Exec Stack Reflection
+
+Just like the data stack, the exec stack can be inspected and modified:
+
+```
+arli> exec-push 10
+arli> exec-push 20
+arli> exec-stack           ;; push a copy of exec stack to data stack
+(10 20)
+```
+
+`exec!` replaces the entire exec stack:
+
+```
+arli> exec! (list (quote +) 100 200)
+arli> exec-depth
+3
+arli> (exec)
+300
+```
+
+`exec-pop` moves the top of the exec stack to the data stack:
+
+```
+arli> exec-push 99
+arli> exec-pop
+99
+```
+
+---
+
+#### 11.3 Self-Modifying Code Patterns
+
+The combination of `exec-push`, `exec-stack`, `exec!`, and `(exec)` enables true self-modifying code: programs that rewrite themselves during execution.
+
+##### Pattern 1: A Loop That Re-pushes Itself
+
+The simplest self-modifying pattern is a loop body that pushes itself back onto the exec stack:
+
+```clojure
+;; A loop that decrements a counter and re-pushes itself
+;; Data stack starts with: n
+(exec-push (quote
+    (do
+        dup                     ;; n n
+        0 = not                 ;; n (n>0)?
+        (if
+            (do
+                dup 1 -         ;; n-1 (decrement)
+                ;; Re-push ourselves to continue the loop
+                exec-push (quote
+                    (do
+                        dup 0 = not
+                        (if
+                            (do
+                                dup 1 -
+                                exec-push (quote ...))
+                            (drop))))
+                ;; Move the decremented value to data stack
+                swap
+                drop)
+            (drop)))))         ;; n=0, we're done
+```
+
+This is verbose because we have to quote the loop body literaly. But it demonstrates the core idea: the program pushes a copy of itself onto the exec stack before finishing, creating a loop.
+
+##### Pattern 2: Building Code From Data
+
+More practical: build code on the data stack using list operations, then push to exec stack and run:
+
+```clojure
+;; Build a program dynamically
+(let ((fn (quote +))        ;; pick a function
+      (a 10)
+      (b 20))
+    ;; Build (fn a b) as a list
+    (exec-push (list fn a b))
+    (exec))                  ;; run it
+;; data stack: [30]
+```
+
+##### Pattern 3: Self-Modifying Function
+
+Define a function that modifies its own behavior:
+
+```clojure
+;; A function that counts how many times it's been called
+(defn counter ()
+    (let ((count stack))       ;; capture current stack
+        (stack! (list 1))      ;; reset stack to [1]
+        (if (= 0 count)        ;; first call?
+            1
+            (+ count 1))))
+
+;; Each call reads the previous count, increments, and stores it
+counter    ;; -> 1  (but wait, counter pops the stack...)
+```
+
+This is limited by the data stack being shared. A better pattern stores state on the exec stack:
+
+```clojure
+;; Store state on the exec stack
+(defn counted-call ()
+    (let ((state exec-stack))         ;; read exec stack
+        ;; The exec stack has our state: (count next-form)
+        ;; Pop and run the next form, then re-push with incremented count
+        ...))
+```
+
+##### Pattern 4: Generative Programming
+
+The most powerful pattern: generate code based on the current program state:
+
+```clojure
+;; A program that evolves
+(defn evolve ()
+    (let ((code exec-stack))
+        ;; Analyze the remaining code on exec stack
+        ;; Modify or extend it based on results so far
+        ;; Push modified code back
+        (exec! (transform code))))
+
+;; Push initial code and evolve
+exec-push (quote (initial-step))
+exec-push (quote (evolve))
+(exec)          ;; runs initial-step, then evolve modifies what's next
+```
+
+---
+
+#### 11.4 Relationship to Push
+
+arli's exec stack is inspired by the [Push programming language](http://faculty.hampshire.edu/lspector/push.html), designed for evolutionary computation. In Push:
+
+| Push | arli | Description |
+|------|------|-------------|
+| `code.stack` | `exec-stack` | Push copy of exec stack to data stack |
+| `code.>` | `exec-push` | Push a value onto the exec stack |
+| `code.pop` | `exec-pop` | Pop exec stack to data stack |
+| `code.depth` | `exec-depth` | Depth of exec stack |
+| `exec.do` | `(exec)` | Process exec stack until empty |
+
+The main difference: Push has **typed stacks** (integer stack, float stack, boolean stack, etc.) and operations dispatch based on the top of each stack. arli keeps a single data stack for simplicity, but the exec stack follows Push's model: code is data, programs live on the exec stack, and self-modification happens by manipulating the exec stack at runtime.
+
+---
+
+#### 11.5 When to Use Stack Reflection
+
+Stack reflection and the exec stack are advanced features. Use them when:
+
+1. **You need self-modifying code** — programs that rewrite themselves based on runtime conditions
+2. **You want to generate code dynamically** — building and executing programs from data
+3. **You're exploring evolutionary computation** — generating, mutating, and selecting programs
+4. **You want fine-grained control over evaluation order** — the exec stack lets you sequence operations explicitly
+
+For everyday arli programming, the normal arity-driven style (`+ 1 2`, `if cond then else`, `defn name (params) body`) is cleaner and faster. Stack reflection is a power tool for when you need to break the normal rules.
+
+---
+
+### Chapter 12: Where To Go From Here
 
 You now know enough to write real programs in arli. Here's what I'd suggest:
 
@@ -985,7 +1362,7 @@ You now know enough to write real programs in arli. Here's what I'd suggest:
 
 3. **Use Python libraries**. Try `import json`, `import re`, `import collections`. The entire Python standard library is at your fingertips.
 
-4. **Write a function that uses the stack**. Try computing `a * (b + c)` using `swap`, `dup`, and `drop` instead of variables.
+4. **Explore exec stack programming**. Try building a program with `exec-push` and running it with `(exec)`. Then try having the program modify itself during execution.
 
 5. **Build something real**. A file renamer. A JSON processor. A web scraper using `import requests`. arli is a scripting language — use it like one.
 

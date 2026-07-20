@@ -211,6 +211,39 @@ All builtins have known arities (>= 0) except where noted. All can be used witho
 | `rot` | 3 | `a b c -> b c a` | Rotate top three items |
 | `nip` | 2 | `a b -> b` | Drop second item |
 | `tuck` | 2 | `a b -> b a b` | Duplicate top under second |
+| `pick` | 1 | `n -> val` | Copy nth element (0=top) to top |
+| `roll` | 1 | `n -> val` | Rotate nth element (0=top) to top |
+
+#### Stack Reflection
+
+| Word | Arity | Description |
+|------|-------|-------------|
+| `stack` | 0 | Push a copy of the data stack as a list |
+| `stack!` | 1 | Replace data stack with a list (returns None to skip push) |
+
+#### Exec Stack Operations (Push-style)
+
+The exec stack holds pending code forms for self-modifying programs. It is the call stack — every function call pushes its body and a `__restore_env__` sentinel onto it.
+
+| Word | Arity | Description |
+|------|-------|-------------|
+| `exec-stack` | 0 | Push a copy of the exec stack to the data stack |
+| `exec!` | 1 | Replace exec stack with a list (returns None) |
+| `exec-push` | 1 | Push a form onto the exec stack (returns None) |
+| `exec-pop` | 0 | Pop top of exec stack to data stack |
+| `exec-depth` | 0 | Push exec stack depth to data stack |
+| `exec-step` | 0 | Pop and evaluate one form from exec stack |
+| `(exec)` | -1 | Process entire exec stack until empty (variadic, parens required) |
+
+The `(exec)` Push interpreter processes items from the exec stack:
+- **Literals**: pushed to the data stack
+- **Symbols**: looked up in the environment and called. Arguments are popped from the **data stack** according to the function's arity.
+- **Lists**: evaluated as normal arli expressions (atomic, prefix)
+
+Special forms supported inside `(exec)`:
+- `if`: pops boolean from data stack, then then/else branches from exec stack
+- `do`: no-op (body items are already on exec stack)
+- `quote`: pops the next exec stack item and pushes it to data stack as data
 
 #### List Operations
 

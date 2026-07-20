@@ -419,6 +419,33 @@ func getBuiltins() map[string]*HyaBuiltin {
 
 	}, 2)
 
+	// Stack reflection: capture current stack as a list
+	add("stack", func(args []HyaValue, ev *Evaluator) (HyaValue, error) {
+		if ev == nil {
+			return HyaList{}, nil
+		}
+		cp := make(HyaList, len(ev.Stack))
+		copy(cp, ev.Stack)
+		return cp, nil
+	}, 0)
+
+	// Stack reflection: replace stack from a list
+	add("stack!", func(args []HyaValue, ev *Evaluator) (HyaValue, error) {
+		if ev == nil {
+			return Nil, nil
+		}
+		switch v := args[0].(type) {
+		case HyaList:
+			ev.Stack = make([]HyaValue, len(v))
+			copy(ev.Stack, v)
+		case HyaNil:
+			ev.Stack = ev.Stack[:0]
+		default:
+			ev.Stack = []HyaValue{v}
+		}
+		return nil, nil // nil return skips the stack push in Eval()
+	}, 1)
+
 	// Evaluation control: eval builtin (for f-expressions)
 	add("eval", func(args []HyaValue, ev *Evaluator) (HyaValue, error) {
 		if ev == nil || len(args) == 0 {

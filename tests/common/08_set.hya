@@ -11,3 +11,5 @@ x
 ;; test: set! inside let
 let ((x 1)) (do set! x 99 x)
 ;; expect: 99
+
+

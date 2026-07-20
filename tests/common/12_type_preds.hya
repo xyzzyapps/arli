@@ -47,3 +47,5 @@ fn? (fn (x) x)
 ;; test: fn? on number
 fn? 42
 ;; expect: false
+
+

@@ -1,0 +1,22 @@
+;; Hya common test: recursive functions
+;;
+;; test: recursive factorial
+(defn-rec fact (n)
+;; expect: <fn fact>
+    (if (= n 0)
+;; expect: 120
+        1
+;; expect: <fn fib>
+        (* n fact (- n 1))))
+;; expect: 55
+fact 5
+
+;; test: recursive fibonacci
+(defn-rec fib (n)
+    (if (= n 0)
+        0
+        (if (= n 1)
+            1
+            + fib (- n 1) fib (- n 2))))
+fib 10
+

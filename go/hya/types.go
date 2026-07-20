@@ -135,7 +135,7 @@ func (f *HyaFn) HyaRepr() string {
 	if n == "" {
 		n = "anon"
 	}
-	return fmt.Sprintf("<fn %s arity=%d>", n, len(f.Params))
+	return fmt.Sprintf("<fn %s>", n)
 }
 
 // ---------------------------------------------------------------------------

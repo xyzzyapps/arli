@@ -16,20 +16,36 @@ func getBuiltins() map[string]*HyaBuiltin {
 		b[name] = &HyaBuiltin{Name: name, Fn: fn, Arity: arity}
 	}
 
-	// Arithmetic
+	// Arithmetic — return int when both args are int
 	add("+", func(args []HyaValue, ev *Evaluator) (HyaValue, error) {
+		if ai, aok := args[0].(HyaInt); aok {
+			if bi, bok := args[1].(HyaInt); bok {
+				return HyaInt(int64(ai) + int64(bi)), nil
+			}
+		}
 		a, b := toFloat(args[0]), toFloat(args[1])
 		return HyaFloat(a + b), nil
 	}, 2)
 	add("-", func(args []HyaValue, ev *Evaluator) (HyaValue, error) {
+		if ai, aok := args[0].(HyaInt); aok {
+			if bi, bok := args[1].(HyaInt); bok {
+				return HyaInt(int64(ai) - int64(bi)), nil
+			}
+		}
 		a, b := toFloat(args[0]), toFloat(args[1])
 		return HyaFloat(a - b), nil
 	}, 2)
 	add("*", func(args []HyaValue, ev *Evaluator) (HyaValue, error) {
+		if ai, aok := args[0].(HyaInt); aok {
+			if bi, bok := args[1].(HyaInt); bok {
+				return HyaInt(int64(ai) * int64(bi)), nil
+			}
+		}
 		a, b := toFloat(args[0]), toFloat(args[1])
 		return HyaFloat(a * b), nil
 	}, 2)
 	add("/", func(args []HyaValue, ev *Evaluator) (HyaValue, error) {
+		// Division always returns float
 		a, b := toFloat(args[0]), toFloat(args[1])
 		if b == 0 {
 			return nil, fmt.Errorf("division by zero")
@@ -51,8 +67,10 @@ func getBuiltins() map[string]*HyaBuiltin {
 		return HyaInt(a % b), nil
 	}, 2)
 	add("neg", func(args []HyaValue, ev *Evaluator) (HyaValue, error) {
-		a := toFloat(args[0])
-		return HyaFloat(-a), nil
+		if ai, ok := args[0].(HyaInt); ok {
+			return HyaInt(-int64(ai)), nil
+		}
+		return HyaFloat(-toFloat(args[0])), nil
 	}, 1)
 
 	// Comparison
@@ -100,7 +118,7 @@ func getBuiltins() map[string]*HyaBuiltin {
 	}, 1)
 	add("over", func(args []HyaValue, ev *Evaluator) (HyaValue, error) {
 		ev.Stack = append(ev.Stack, args[0])
-		return args[1], nil
+		return args[0], nil
 	}, 2)
 	add("rot", func(args []HyaValue, ev *Evaluator) (HyaValue, error) {
 		// Returns (b, c, a) from (a, b, c)
@@ -145,6 +163,11 @@ func getBuiltins() map[string]*HyaBuiltin {
 		copy(result, list[1:])
 		return result, nil
 	}, 1)
+
+	// List
+	add("list", func(args []HyaValue, ev *Evaluator) (HyaValue, error) {
+		return HyaList(args), nil
+	}, -1)
 
 	// I/O
 	add("print", func(args []HyaValue, ev *Evaluator) (HyaValue, error) {

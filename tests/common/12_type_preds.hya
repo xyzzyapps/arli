@@ -1,0 +1,49 @@
+;; Hya common test: type predicates
+;;
+;; test: number? on int
+number? 42
+;; expect: true
+
+;; test: number? on float
+number? 3.14
+;; expect: true
+
+;; test: number? on string
+number? "hello"
+;; expect: false
+
+;; test: string? on string
+string? "hello"
+;; expect: true
+
+;; test: symbol? on symbol (using quote)
+symbol? quote x
+;; expect: true
+
+;; test: symbol? on number
+symbol? 42
+;; expect: false
+
+;; test: nil? on nil
+nil? nil
+;; expect: true
+
+;; test: nil? on non-nil
+nil? 42
+;; expect: false
+
+;; test: list? on list
+list? (list 1 2)
+;; expect: true
+
+;; test: list? on number
+list? 42
+;; expect: false
+
+;; test: fn? on function
+fn? (fn (x) x)
+;; expect: true
+
+;; test: fn? on number
+fn? 42
+;; expect: false

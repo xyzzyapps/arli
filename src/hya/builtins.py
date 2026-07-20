@@ -119,13 +119,13 @@ def _dup(a, evaluator=None):
 
 
 def _swap(a, b, evaluator=None):
-    """Swap top two items on stack — returns (b, a)."""
+    """Swap top two items on stack — returns b then a."""
     if evaluator is not None:
         evaluator.stack.pop()  # remove b
         evaluator.stack.pop()  # remove a
         evaluator.stack.append(b)
         evaluator.stack.append(a)
-    return b, a
+    return b  # return the new top
 
 
 def _drop(a, evaluator=None):
@@ -149,7 +149,7 @@ def _rot(a, b, c, evaluator=None):
         evaluator.stack.append(b)
         evaluator.stack.append(c)
         evaluator.stack.append(a)
-    return b, c, a
+    return c  # new top of stack
 
 
 def _nip(a, b, evaluator=None):

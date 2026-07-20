@@ -1,0 +1,36 @@
+;; Hya common test: control flow
+;;
+;; test: if true
+if true "yes" "no"
+;; expect: "yes"
+
+;; test: if false
+if nil "yes" "no"
+;; expect: "no"
+
+;; test: if with comparison
+if (> 10 5) "bigger" "smaller"
+;; expect: "bigger"
+
+;; test: cond with multiple clauses
+define x 5
+;; expect: 5
+cond ((> x 10) "big" (< x 3) "small" true "medium")
+;; expect: "medium"
+
+;; test: do sequence
+define a 10
+;; expect: 10
+do set! a + a 10 set! a + a 10
+;; expect: 30
+
+;; test: while loop
+define i 0
+;; expect: 0
+define sum 0
+;; expect: 0
+while (< i 5) do set! sum + sum i set! i + i 1
+;; expect: 5
+sum
+;; expect: 10
+

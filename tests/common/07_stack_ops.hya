@@ -1,0 +1,38 @@
+;; Hya common test: stack operations
+;;
+;; test: dup duplicates top of stack
+dup 5
+;; expect: 5
+
+;; test: swap reorders
+swap 2 1
+;; expect: 1
+
+;; test: drop returns nil
+drop 42
+;; expect: nil
+
+;; test: over copies second item
+over 1 2
+;; expect: 1
+
+;; test: rot rotates
+rot 1 2 3
+;; expect: 3
+
+;; test: nip removes second
+nip 1 2
+;; expect: 2
+
+;; test: cons builds list
+cons 1 cons 2 cons 3 nil
+;; expect: (1 2 3)
+
+;; test: car gets first
+car cons 1 cons 2 nil
+;; expect: 1
+
+;; test: cdr gets rest
+cdr cons 1 cons 2 nil
+;; expect: (2)
+

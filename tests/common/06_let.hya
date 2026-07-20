@@ -1,0 +1,14 @@
+;; Hya common test: let bindings
+;;
+;; test: basic let
+let ((x 5) (y 3)) + x y
+;; expect: 8
+
+;; test: let with expression bindings
+let ((x + 3 4) (y * 2 4)) + x y
+;; expect: 15
+
+;; test: nested let uses lexical scoping
+let ((x 10)) let ((x 20)) x
+;; expect: 20
+

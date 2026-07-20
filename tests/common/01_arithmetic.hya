@@ -1,0 +1,24 @@
+;; Hya common test: arithmetic
+;; This file tests basic arithmetic operations with arity-driven parsing
+;;
++ 1 2
+;; expect: 3
+
+* + 2 3 4
+;; expect: 20
+
+/ - 10 2 3
+;; expect: 2.6666666666666665
+
+- 10 5
+;; expect: 5
+
+// 10 3
+;; expect: 3
+
+% 10 3
+;; expect: 1
+
+neg 42
+;; expect: -42
+

@@ -1,0 +1,10 @@
+;; Hya common test: quote
+;;
+;; test: quote returns unevaluated expression
+quote + 1 2
+;; expect: (+ 1 2)
+
+;; test: quoted list
+quote (1 2 3)
+;; expect: (1 2 3)
+

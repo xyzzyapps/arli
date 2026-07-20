@@ -1,0 +1,36 @@
+;; Hya common test: complex compositions
+;;
+;; test: nested arithmetic with defn
+(defn square (x) (* x x))
+;; expect: <fn square>
++ square 6 square 8
+;; expect: 100
+
+;; test: conditional return from function
+(defn abs (x) (if (< x 0) (neg x) x))
+;; expect: <fn abs>
+abs -5
+;; expect: 5
+
+;; test: multiple definitions and chained calls
+(defn double (x) (* x 2))
+;; expect: <fn double>
+(defn add10 (x) (+ x 10))
+;; expect: <fn add10>
+double add10 5
+;; expect: 30
+
+;; test: closure captures environment
+define base 10
+;; expect: 10
+(defn add-base (x) + base x)
+;; expect: <fn add-base>
+add-base 1
+;; expect: 11
+
+;; test: cond with nested expressions
+define score 85
+;; expect: 85
+cond ((> score 90) "A" (> score 80) "B" true "C")
+;; expect: "B"
+

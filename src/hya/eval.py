@@ -73,6 +73,10 @@ class Evaluator:
         self.arity_table.register("while", 2)    # while cond body
         self.arity_table.register("for", 3)      # for var list body
         self.arity_table.register("cond", 1)     # cond clauses-list
+        self.arity_table.register("import", 1)   # import module-name
+        self.arity_table.register("import!", 2)  # import! module alias
+        self.arity_table.register(".", 2)        # . obj attr
+        self.arity_table.register("python", 1)   # python "code"
 
     def eval(self, expr: Any) -> Any:
         """Evaluate a single expression and return the result.
@@ -146,6 +150,21 @@ class Evaluator:
                     # Register arity for function values
                     if isinstance(value, Function):
                         self.arity_table.register(name, value.arity)
+                    elif callable(value):
+                        # Try to detect arity of Python callables
+                        try:
+                            import inspect
+                            sig = inspect.signature(value)
+                            required = sum(
+                                1 for p in sig.parameters.values()
+                                if p.default is inspect.Parameter.empty
+                                and p.kind in (
+                                    inspect.Parameter.POSITIONAL_ONLY,
+                                    inspect.Parameter.POSITIONAL_OR_KEYWORD))
+                            if required >= 0:
+                                self.arity_table.register(name, required)
+                        except (ValueError, TypeError):
+                            pass  # Can't determine arity, skip
                     return value
                 raise SyntaxError(
                     f"define expects a symbol name, got {name_expr}")
@@ -293,6 +312,86 @@ class Evaluator:
                 finally:
                     self.env = old_env
 
+            # ---- Python Interop ----
+
+            # IMPORT: import a Python module (arity 1: import os)
+            if isinstance(head, Symbol) and head.name in ("import", "import!"):
+                if len(expr) < 2:
+                    raise SyntaxError("import expects (import module-name)")
+                module_name = expr[1]
+                if isinstance(module_name, Symbol):
+                    import importlib
+                    try:
+                        mod = importlib.import_module(module_name.name)
+                        name = module_name.name
+                        # Use import! to bind under a different name
+                        if head.name == "import!" and len(expr) >= 3:
+                            if isinstance(expr[2], Symbol):
+                                name = expr[2].name
+                        self.env.define(name, mod)
+                        return mod
+                    except ImportError as e:
+                        raise ImportError(
+                            f"Cannot import Python module '{module_name.name}': {e}")
+                raise TypeError(
+                    f"import expects a symbol, got {module_name}")
+
+            # DOT: chained attribute access
+            # (. os path join "a" "b") = os.path.join("a", "b")
+            # Top-level: . os path (arity 2) = getattr(os, 'path')
+            if isinstance(head, Symbol) and head.name == ".":
+                if len(expr) < 3:
+                    raise SyntaxError(
+                        ". expects (. obj attr [attr...] [args...])")
+                obj = self._eval_expr(expr[1])
+                # Walk through attr chain, then collect call args
+                i = 2
+                while i < len(expr):
+                    item = expr[i]
+                    if isinstance(item, Symbol):
+                        # Attribute access
+                        attr_name = item.name
+                        if hasattr(obj, attr_name):
+                            obj = getattr(obj, attr_name)
+                            i += 1
+                        else:
+                            raise AttributeError(
+                                f"'{type(obj).__name__}' "
+                                f"has no attribute '{attr_name}'")
+                    else:
+                        # Not a symbol — start of call args
+                        break
+                # If we have remaining items, call the result
+                if i < len(expr):
+                    call_args = [self._eval_expr(a)
+                                 for a in expr[i:]]
+                    if callable(obj):
+                        return obj(*call_args)
+                    raise TypeError(
+                        f"Cannot call non-callable: {obj}")
+                return obj
+
+            # PYTHON: evaluate arbitrary Python expression
+            if isinstance(head, Symbol) and head.name == "python":
+                if len(expr) < 2:
+                    raise SyntaxError(
+                        "python expects (python \"code\")")
+                code = expr[1]
+                if isinstance(code, str):
+                    import builtins as py_builtins
+                    # Evaluate in context of the global environment
+                    local_vars = {}
+                    for k, v in self.global_env._bindings.items():
+                        local_vars[k] = v
+                    try:
+                        result = eval(code, py_builtins.__dict__, local_vars)
+                        return result
+                    except Exception as e:
+                        raise RuntimeError(
+                            f"Python eval error: {e}")
+                raise TypeError(
+                    f"python expects a string, got {type(code)}")
+
             # ---- Generic function application ----
             if isinstance(head, Symbol) and head.name == "defn-rec":
                 # Same as defn but the function body can recurse
@@ -317,6 +416,9 @@ class Evaluator:
 
             if isinstance(fn_val, Function):
                 return self._apply_function(fn_val, args)
+
+            if callable(fn_val):
+                return fn_val(*args)
 
             raise TypeError(
                 f"Cannot call non-function: {hya_repr(fn_val)}")

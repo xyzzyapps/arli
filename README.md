@@ -29,6 +29,13 @@ print fib 10      ;; prints 55
 - **Arity-driven syntax**: Functions with known arity don't need parentheses
 - **Stack-based evaluation**: Forth-like data stack with `dup`, `swap`, `drop`, `over`, `rot`
 - **Lisp semantics**: S-expressions, lexical scoping, closures, first-class functions
+- **Vector/Map literals**: `[1 2 3]` and `{:key val}` syntax
+- **Keywords**: Self-evaluating `:keyword` symbols
+- **Pattern matching**: `(match val (pat result) (_ default))`
+- **Sequence operations**: `map`, `filter`, `reduce` builtins
+- **Docstrings**: Documentation system via `(doc symbol "text")`
+- **Testing**: `(assert expr message)` for inline tests
+- **Module system**: `(import-module "path.arli")` for loading files
 - **Python interop**: Use any Python library via `import`, `.`, or `python`
 - **Go backend**: Compiled Go binary with Go standard library access
 - **Unicode symbols**: Greek, Cyrillic, Chinese, math symbols as function names
@@ -94,10 +101,14 @@ rot 1 2 3   ;; -> [2, 3, 1]
 **Comparison**: `=`, `<`, `>`, `<=`, `>=`, `!=`
 **Logic**: `and`, `or`, `not`
 **Stack**: `dup`, `swap`, `drop`, `over`, `rot`, `nip`, `tuck`
-**Lists**: `cons`, `car`, `cdr`, `list`, `nil?`, `list?`
+**Lists**: `cons`, `car`, `cdr`, `list`, `nil?`, `list?` `map`, `filter`, `reduce`
+**Sequences**: `map`, `filter`, `reduce`
+**Data**: `hash-map`, `list`
 **I/O**: `print`, `.`, `read`
 **Types**: `number?`, `string?`, `symbol?`, `fn?`
-
+**Testing**: `(assert expr message)`
+**Docs**: `(doc symbol)` / `(doc symbol "text")`
+**Matching**: `(match value clause...)`
 ## Development
 
 ```bash

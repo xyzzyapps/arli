@@ -60,15 +60,26 @@ Source Code
 | `int` | Python integer | `42` |
 | `float` | Python float | `3.14` |
 | `str` | Python string | `"hello"` |
-| `Symbol` | Named symbol | `x`, `+`, `define` |
+| `Symbol` | Named symbol | `x`, `+`, `define`, `:keyword` |
 | `NilType` (singleton `nil`) | Empty list / false | `nil` |
 | `Builtin` | Python function with arity | `<Builtin + arity=2>` |
 | `Function` | User-defined closure | `<fn add arity=2>` |
 | `list` | Python list (S-expression) | `(1 2 3)` |
+| `dict` | Python dict (via `hash-map`) | `{:a 1 :b 2}` |
+
+### Keywords
+Symbols starting with `:` are keywords — they self-evaluate. `:foo` evaluates to `:foo`.
+Keywords are used as map keys and for named parameters.
+
+### Vector/Map Literal Syntax
+```
+[1 2 3]           ;; -> (list 1 2 3) -> [1, 2, 3]
+{:a 1 :b 2}       ;; -> (hash-map :a 1 :b 2) -> {':a': 1, ':b': 2}
+```
+Vectors and maps are syntactic sugar that expand to `list` and `hash-map` calls.
 
 ### Truthiness
 Only `nil` is falsey. Everything else (including `0`, `""`, `[]`) is truthy.
-
 ## Arity-Driven Parsing
 
 ### Core Algorithm
@@ -149,6 +160,10 @@ Is it a list (S-expr)?   --> check special forms first:
 | `while` | `(while cond body...)` | Loop |
 | `set!` | `(set! name value)` | Mutate binding |
 | `let` | `(let ((name val)...) body)` | Local bindings |
+| `assert` | `(assert expr message)` | Raise if expr is falsy |
+| `doc` | `(doc symbol)` / `(doc symbol "text")` | Retrieve/store docs |
+| `match` | `(match val clause...)` | Pattern matching |
+| `import-module` | `(import-module "path")` | Load .arli file |
 
 ### Function Application
 
@@ -196,6 +211,15 @@ result = eval_body(fn.body, call_env)
 | `list` | -1 | Create list (variadic, requires parens) |
 | `nil?` | 1 | Check if nil |
 | `list?` | 1 | Check if list |
+| `map` | 2 | Apply fn to each element: `(map fn list)` |
+| `filter` | 2 | Keep elements where fn returns truthy |
+| `reduce` | 3 | Accumulate: `(reduce fn init list)` |
+
+### Data Structures
+| Word | Arity | Description |
+|------|-------|-------------|
+| `hash-map` | -1 | Create dict from key-value pairs |
+| `list` | -1 | Create list |
 
 ### I/O
 `print` (arity 1), `.` (arity 1, like Forth `.`), `read` (arity 0)
@@ -203,6 +227,16 @@ result = eval_body(fn.body, call_env)
 ### Type Checking
 `number?`, `string?`, `symbol?`, `fn?` (all arity 1)
 
+### Testing & Documentation
+| Word | Arity | Description |
+|------|-------|-------------|
+| `assert` | 2 | `(assert expr message)` — raises if expr is falsy |
+| `doc` | 2 | `(doc sym "text")` stores, `(doc sym)` retrieves |
+
+### Pattern Matching
+| Word | Arity | Description |
+|------|-------|-------------|
+| `match` | -1 | `(match val (pat result) (_ default))` — first matching clause wins |
 ## Evaluation & Parsing Interleaving
 
 arli uses **interleaved parse-eval** execution. Each top-level expression is parsed and evaluated before the next expression is parsed. This ensures that arity registrations from `defn`/`define` take effect for immediately following expressions.

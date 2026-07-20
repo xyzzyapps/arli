@@ -492,7 +492,94 @@ This is the power of arli: Lisp-like syntax with Forth-like stack semantics and 
 
 ---
 
-### Chapter 6: Using Go From arli
+### Chapter 6: Vectors, Maps, and Keywords
+
+Arli provides literal syntax for vectors and maps as syntactic sugar.
+
+#### Vector Literals
+
+Use `[` and `]` to create lists:
+
+```
+arli> [1 2 3]
+(1 2 3)
+arli> car [1 2 3]
+1
+arli> map (fn (x) * x 2) [1 2 3]
+(2 4 6)
+```
+
+#### Map Literals
+
+Use `{` and `}` with keywords for hash-map creation:
+
+```
+arli> {:name "arli" :version 1}
+{':name': 'arli', ':version': 1}
+```
+
+#### Keywords
+
+Keywords start with `:` and evaluate to themselves:
+
+```
+arli> :hello
+:hello
+arli> define my-map {:a 1 :b 2}
+{':a': 1, ':b': 2}
+```
+
+#### Sequence Operations
+
+`map`, `filter`, and `reduce` work with lists:
+
+```
+arli> map (fn (x) * x 2) (list 1 2 3)
+(2 4 6)
+arli> filter (fn (x) > x 2) (list 1 2 3 4 5)
+(3 4 5)
+arli> reduce (fn (acc x) + acc x) 0 (list 1 2 3 4 5)
+15
+```
+
+#### Pattern Matching with `match`
+
+The `match` form selects the first clause whose pattern matches:
+
+```
+arli> match 3 (1 "one") (2 "two") (_ "other")
+"other"
+arli> match 1 (1 "one") (2 "two") (_ "other")
+"one"
+```
+
+Use `_` as a wildcard that matches anything.
+
+#### Documentation with `doc`
+
+Store and retrieve documentation:
+
+```
+arli> doc add "Adds two numbers together"
+"Adds two numbers together"
+arli> doc add
+"Adds two numbers together"
+```
+
+#### Testing with `assert`
+
+Verify conditions inline:
+
+```
+arli> assert true "this passes"
+True
+arli> assert false "this fails"
+Error: Assertion failed: "this fails"
+```
+
+---
+
+### Chapter 7: Using Go From arli
 
 Arli also runs on **Go** (`go/arli/`). The Go backend gives you access to Go's standard library through the same `.` operator.
 
@@ -568,7 +655,7 @@ Then define the package struct with the functions you want to expose.
 
 ---
 
-### Chapter 7: The Stack in Practice
+### Chapter 8: The Stack in Practice
 
 Now let's see how the stack influences real code organization. Here's a Fibonacci function written two ways:
 
@@ -596,7 +683,7 @@ The key insight is that **arity-driven parsing** and **stack-based evaluation** 
 
 ---
 
-### Chapter 8: How It All Works
+### Chapter 9: How It All Works
 
 Let me pull back the curtain and show you how arli works internally.
 
@@ -647,7 +734,7 @@ The `python` special form uses Python's `eval()` function with the current arli 
 
 ---
 
-### Chapter 9: Where To Go From Here
+### Chapter 10: Where To Go From Here
 
 You now know enough to write real programs in arli. Here's what I'd suggest:
 

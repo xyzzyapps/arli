@@ -1,3 +1,0 @@
-﻿# Arli - no external dependencies required
-# For development:
-# pytest

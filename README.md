@@ -288,3 +288,8 @@ See [SPEC.md](SPEC.md) for full technical specification.
 ## License
 
 MIT
+ 
+## Signature
+
+Original Research by Xyzzy, built with assistance from **Deepseek 4 Pro**.   
+Specification target: the implementation described in [SPEC.md](SPEC.md).

@@ -1,9 +1,9 @@
-﻿package main
+package main
 
 import "fmt"
 
 // ---------------------------------------------------------------------------
-// Environment â€” lexical scoping with parent chain
+// Environment — lexical scoping with parent chain
 // ---------------------------------------------------------------------------
 
 type Environment struct {

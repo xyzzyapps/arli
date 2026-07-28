@@ -1,4 +1,4 @@
-﻿# arli Compared: What's There, What's Missing
+# arli Compared: What's There, What's Missing
 
 ## The Design Philosophy
 
@@ -10,9 +10,9 @@ Before the comparison, let's state the principle explicitly:
 
 This means "missing" features fall into three categories:
 
-1. **Core should have it** â€” essential for any language backend
-2. **Base language already provides it** â€” no need to add to core
-3. **Macro / library territory** â€” can be added without touching core
+1. **Core should have it** — essential for any language backend
+2. **Base language already provides it** — no need to add to core
+3. **Macro / library territory** — can be added without touching core
 
 ---
 
@@ -120,7 +120,7 @@ error as argument. Or arity 3 for try/catch/finally.
 
 ### 2. DESIGN DECISION: Macros
 
-arli doesn't have macros. This is intentional â€” macros require a separate
+arli doesn't have macros. This is intentional — macros require a separate
 compile phase, which conflicts with arli's interleaved parse-eval model
 (where each expression is parsed and evaluated immediately).
 
@@ -137,7 +137,7 @@ For example, a threading macro equivalent in arli:
 ;; Just write:
 g f x 1 2
 
-;; Wait â€” that's wrong. Threading re-orders arguments.
+;; Wait — that's wrong. Threading re-orders arguments.
 ;; With arity-driven syntax, threading is less necessary because
 ;; composition is already flat:
 + 1 * 2 3    ;; = (+ 1 (* 2 3)) -- no nesting needed!
@@ -193,8 +193,8 @@ that other Lisps force you to do mentally.
 |----------|---------|-------|--------|
 | **HIGH** | `try` / `catch` / `throw` | 2 / 1 | Every backend needs error handling |
 | MEDIUM | `->` threading builtin | 2 | Complements arity syntax |
-| LOW | Destructuring | â€” | Ergonomic sugar |
-| FUTURE | Macros | â€” | Requires compile phase |
+| LOW | Destructuring | — | Ergonomic sugar |
+| FUTURE | Macros | — | Requires compile phase |
 
 ## Future Backends (Go / C)
 
@@ -208,11 +208,11 @@ The architecture already supports this division:
 - ArityTable
 
 **Backend-specific** (swap Python for Go/C):
-- Evaluator (`_eval_expr`) â€” walks AST, applies rules
-- Builtins â€” reimplemented per backend
-- I/O â€” platform I/O
-- Module loading â€” `import foo` in Go loads Go module, etc.
-- `.` operator â€” `getattr` in Python, reflection in Go/C
+- Evaluator (`_eval_expr`) — walks AST, applies rules
+- Builtins — reimplemented per backend
+- I/O — platform I/O
+- Module loading — `import foo` in Go loads Go module, etc.
+- `.` operator — `getattr` in Python, reflection in Go/C
 - `host` special form → host eval
 
 The key is that the **Parser** and **AST** are completely language-agnostic.

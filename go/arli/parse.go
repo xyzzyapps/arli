@@ -1,7 +1,7 @@
-﻿package main
+package main
 
 // ---------------------------------------------------------------------------
-// ArityTable â€” maps symbol names to their arity
+// ArityTable — maps symbol names to their arity
 // ---------------------------------------------------------------------------
 
 type ArityTable struct {
@@ -22,7 +22,7 @@ func (at *ArityTable) Get(name string) (int, bool) {
 }
 
 // ---------------------------------------------------------------------------
-// Parser â€” arity-driven S-expression parser
+// Parser — arity-driven S-expression parser
 // ---------------------------------------------------------------------------
 
 type Parser struct {
@@ -310,7 +310,7 @@ func (p *Parser) parseDefnRec(stream *TokenStream) ArliValue {
 	p.arities.Register(string(name), len(paramSyms))
 
 	// Parse ONE body expression (like defn arity 3).
-	// Multiple expressions use (do ...) â€” consistent with defn.
+	// Multiple expressions use (do ...) — consistent with defn.
 	var body []ArliValue
 	tok := stream.Peek()
 	if tok.Type != TK_CLOSE && tok.Type != TK_EOF {

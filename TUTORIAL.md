@@ -1,4 +1,4 @@
-﻿# Practical arli: A Lisp Without Parentheses
+# Practical arli: A Lisp Without Parentheses
 
 ## Or, How I Learned to Stop Worrying and Love Arity
 
@@ -6,7 +6,7 @@
 
 You know the complaint. It's the same one that's been leveled at Lisp since McCarthy first scrawled parentheses on a blackboard in 1958: "Too many parens."
 
-But here's the thing â€” the parentheses in Lisp aren't noise. They're structure. They tell you (and the computer) where one expression ends and another begins. The problem isn't that Lisp has parentheses. The problem is that **every expression** needs them, even when the structure is already obvious.
+But here's the thing — the parentheses in Lisp aren't noise. They're structure. They tell you (and the computer) where one expression ends and another begins. The problem isn't that Lisp has parentheses. The problem is that **every expression** needs them, even when the structure is already obvious.
 
 Consider this:
 
@@ -14,7 +14,7 @@ Consider this:
 (+ 1 (* 2 3))
 ```
 
-You read this as: "add 1 to the result of multiplying 2 by 3." The parentheses around `(* 2 3)` tell you it's a sub-expression. But look at `+` â€” it takes two arguments. Everyone knows `+` takes two arguments. Why do we need the outer parentheses to tell us that?
+You read this as: "add 1 to the result of multiplying 2 by 3." The parentheses around `(* 2 3)` tell you it's a sub-expression. But look at `+` — it takes two arguments. Everyone knows `+` takes two arguments. Why do we need the outer parentheses to tell us that?
 
 What if we wrote this instead:
 
@@ -26,9 +26,9 @@ The `+` takes two arguments. The first is `1`. The second is `* 2 3`, which is i
 
 This is the core idea behind **arli**: when a function's arity is known, you don't need parentheses. When it's unknown (variadic), you still use them as a fallback.
 
-But arli isn't just "Lisp with fewer parens." It's also **stack-based** â€” inspired by Forth â€” so data flows through an explicit stack. Functions push and pop values. It's a different way of thinking about computation, and once it clicks, it changes how you structure programs.
+But arli isn't just "Lisp with fewer parens." It's also **stack-based** — inspired by Forth — so data flows through an explicit stack. Functions push and pop values. It's a different way of thinking about computation, and once it clicks, it changes how you structure programs.
 
-And finally, arli sits **on top of Python**. Every Python module, function, and object is accessible from arli. You can `import os`, call `os.getcwd()`, or `eval("python code")` directly. This means arli isn't a toy â€” it's a scripting language with access to the entire Python ecosystem.
+And finally, arli sits **on top of Python**. Every Python module, function, and object is accessible from arli. You can `import os`, call `os.getcwd()`, or `eval("python code")` directly. This means arli isn't a toy — it's a scripting language with access to the entire Python ecosystem.
 
 ---
 
@@ -54,7 +54,7 @@ arli> + 1 2
 3
 ```
 
-No parentheses. Just `+`, then `1`, then `2`. The `+` function has **arity 2** â€” it takes two arguments. The parser sees `+`, knows it needs two things, and consumes `1` and `2` as its arguments. The evaluator adds them, and pushes `3` onto the stack. The REPL prints the top of the stack.
+No parentheses. Just `+`, then `1`, then `2`. The `+` function has **arity 2** — it takes two arguments. The parser sees `+`, knows it needs two things, and consumes `1` and `2` as its arguments. The evaluator adds them, and pushes `3` onto the stack. The REPL prints the top of the stack.
 
 Nesting works the same way:
 
@@ -122,7 +122,7 @@ The only forms that **do** require parentheses are variadic ones (arity -1) and 
 
 And `defn-rec` specifically requires parentheses because it must register the function's arity **before** parsing the body, which requires a special parser handler that only activates inside parens.
 
-**Unicode symbols** are fully supported as function and variable names â€” Greek letters, Cyrillic, Chinese characters, even math symbols:
+**Unicode symbols** are fully supported as function and variable names — Greek letters, Cyrillic, Chinese characters, even math symbols:
 ```
 arli> define Ï€ 3.14159
 3.14159
@@ -194,7 +194,7 @@ arli> y
 
 #### set!: Changing Things
 
-`set!` has arity 2 â€” it mutates an existing binding:
+`set!` has arity 2 — it mutates an existing binding:
 
 ```
 arli> define x 10
@@ -218,7 +218,7 @@ Instead of computing `+ 1 2` (which would be `3`), `quote` returns the expressio
 
 #### do: Sequencing (Variadic)
 
-`do` is variadic â€” it takes any number of expressions and returns the last. Because it's variadic, you use parentheses:
+`do` is variadic — it takes any number of expressions and returns the last. Because it's variadic, you use parentheses:
 
 ```
 arli> (do print "hello" + 1 2)
@@ -319,7 +319,7 @@ This uses Python's `random` module, `input()` for user input, and arli's control
 
 **What you'll build:** A postfix (RPN) calculator that evaluates expressions like `3 4 + 2 *` using stack operations — and understand exactly how data flows through arli's evaluator.
 
-Now let's talk about the stack. arli isn't just a Lisp â€” it's a **Forth-like** Lisp. This means there's an explicit data stack that all operations push to and pop from.
+Now let's talk about the stack. arli isn't just a Lisp — it's a **Forth-like** Lisp. This means there's an explicit data stack that all operations push to and pop from.
 
 When you evaluate an expression, the result is pushed onto the stack:
 
@@ -347,7 +347,7 @@ Both results are on the stack. The most recent is on top (index 1).
 
 arli provides Forth-like stack manipulation words with known arities:
 
-**`dup` (arity 1)** â€” duplicates the top of the stack:
+**`dup` (arity 1)** — duplicates the top of the stack:
 ```
 arli> dup 5
 5
@@ -357,7 +357,7 @@ Stack (2 items):
   1: 5
 ```
 
-**`swap` (arity 2)** â€” swaps the top two items:
+**`swap` (arity 2)** — swaps the top two items:
 ```
 arli> swap 1 2
 2
@@ -368,7 +368,7 @@ Stack (2 items):
   1: 1
 ```
 
-**`drop` (arity 1)** â€” discards the top of the stack:
+**`drop` (arity 1)** — discards the top of the stack:
 ```
 arli> drop 42
 nil
@@ -376,7 +376,7 @@ arli> /stack
 Stack is empty.
 ```
 
-**`over` (arity 2)** â€” duplicates the second item:
+**`over` (arity 2)** — duplicates the second item:
 ```
 arli> over 1 2
 1
@@ -387,7 +387,7 @@ Stack (3 items):
   2: 1
 ```
 
-**`rot` (arity 3)** â€” rotates the top three items:
+**`rot` (arity 3)** — rotates the top three items:
 ```
 arli> rot 1 2 3
 2
@@ -400,7 +400,7 @@ Stack (3 items):
   2: 1
 ```
 
-**`nip` (arity 2)** â€” drops the second item:
+**`nip` (arity 2)** — drops the second item:
 ```
 arli> nip 1 2
 2
@@ -409,7 +409,7 @@ Stack (1 items):
   0: 2
 ```
 
-**`tuck` (arity 2)** â€” duplicates the top under the second:
+**`tuck` (arity 2)** — duplicates the top under the second:
 ```
 arli> tuck 1 2
 2
@@ -441,14 +441,14 @@ arli> add 1 2
 3
 ```
 
-The syntax is `defn name (params) body` â€” three arguments: a name, a parameter list, and a single body expression. If you need multiple body expressions, use an explicit `(do ...)` block:
+The syntax is `defn name (params) body` — three arguments: a name, a parameter list, and a single body expression. If you need multiple body expressions, use an explicit `(do ...)` block:
 
 ```
 arli> defn add (x y) (do print "adding" + x y)
 <fn add>
 ```
 
-When you define `add` with parameters `(x y)`, arli registers `add` with arity 2. From that point on, `add 1 2` works without parentheses â€” the parser knows `add` needs two arguments and consumes them automatically.
+When you define `add` with parameters `(x y)`, arli registers `add` with arity 2. From that point on, `add 1 2` works without parentheses — the parser knows `add` needs two arguments and consumes them automatically.
 #### defn-rec: Recursive Functions
 
 For recursive functions, use `defn-rec`:
@@ -463,7 +463,7 @@ arli> fact 5
 120
 ```
 
-The difference between `defn` and `defn-rec` is that `defn-rec` registers the function's arity **before** parsing the body. This means the function can call itself recursively â€” when the parser encounters `fact` in the body, it already knows `fact` takes 1 argument.
+The difference between `defn` and `defn-rec` is that `defn-rec` registers the function's arity **before** parsing the body. This means the function can call itself recursively — when the parser encounters `fact` in the body, it already knows `fact` takes 1 argument.
 
 Without `defn-rec`, you'd get an error because `fact` wouldn't be in the arity table when the body is parsed.
 
@@ -508,7 +508,7 @@ arli> . os sep
 "\\"
 ```
 
-This is `getattr(os, 'sep')` â€” it returns the path separator character.
+This is `getattr(os, 'sep')` — it returns the path separator character.
 
 For chaining attribute access and method calls, use parentheses:
 
@@ -715,7 +715,7 @@ Error: Assertion failed: "this fails"
 
 ---
 
-### Chapter 7: F-Expressions â€” Functions That Don't Evaluate
+### Chapter 7: F-Expressions — Functions That Don't Evaluate
 
 **What you'll build:** Your own control structures — `unless`, `n-times`, `short-or` — that short-circuit, repeat, or skip evaluation just like built-in forms. You'll understand how Lisp-style fexprs give you macro-like power without a macro system.
 
@@ -723,7 +723,7 @@ Every function you've seen so far evaluates its arguments eagerly. When you writ
 
 But what if you want to write your own `if`? Or your own `while`? Or a logging wrapper that inspects expressions without evaluating them?
 
-In most languages, you can't â€” control structures are built into the language. But arli gives you **f-expressions** (fexprs): user-defined functions that receive their arguments **unevaluated**.
+In most languages, you can't — control structures are built into the language. But arli gives you **f-expressions** (fexprs): user-defined functions that receive their arguments **unevaluated**.
 
 #### defn-fexpr: Creating an F-Expression
 
@@ -747,7 +747,7 @@ arli> my-if false "yes" "no"
 "no"
 ```
 
-No parentheses needed â€” `my-if` has arity 3, just like `if`. The difference is that `if` is built into the language, while `my-if` is defined entirely in arli code.
+No parentheses needed — `my-if` has arity 3, just like `if`. The difference is that `if` is built into the language, while `my-if` is defined entirely in arli code.
 
 #### Why This Matters: Short-Circuit Evaluation
 
@@ -771,14 +771,14 @@ arli> defn-fexpr short-or (a b)
 <fexpr short-or arity=2>
 
 arli> short-or true (side-effect 42)
-true                       ;; no "computing..." â€” side-effect was never called
+true                       ;; no "computing..." — side-effect was never called
 
 arli> short-or false (side-effect 42)
 "computing..."
 42                         ;; only evaluates the second argument when needed
 ```
 
-This is how Lisp macros work, but fexprs are **runtime** â€” no compile-time macro expansion step needed.
+This is how Lisp macros work, but fexprs are **runtime** — no compile-time macro expansion step needed.
 
 #### Inspecting Raw Forms
 
@@ -824,17 +824,17 @@ arli> eval expr
 3
 ```
 
-In fexprs, `eval` is how you selectively evaluate arguments. An argument you don't `eval` stays as a raw form â€” you can pass it around, inspect it, or discard it.
+In fexprs, `eval` is how you selectively evaluate arguments. An argument you don't `eval` stays as a raw form — you can pass it around, inspect it, or discard it.
 
 #### Important Caveats
 
 **1. Name conflicts**: Parameter names must not match registered operator names. If you name a parameter `cond` (arity 1), the parser will try to consume an argument after it:
 
 ```
-;; BAD â€” 'cond' has arity 1, parser consumes ')'
+;; BAD — 'cond' has arity 1, parser consumes ')'
 (defn-fexpr bad (cond body) ...)
 
-;; GOOD â€” use unique names
+;; GOOD — use unique names
 (defn-fexpr good (cnd bod) ...)
 ```
 
@@ -990,7 +990,7 @@ The parser groups this as `* 2 (+ 3 4)`. Inside the evaluator:
 1. `+ 3 4` computes 7, pushes it to the stack
 2. `* 2` pops 2 and the result (7), computes 14, pushes it
 
-Even without explicit stack words, arity-driven parsing **is** the stack style â€” data flows from inner expressions to outer ones, and results accumulate on the stack naturally.
+Even without explicit stack words, arity-driven parsing **is** the stack style — data flows from inner expressions to outer ones, and results accumulate on the stack naturally.
 
 #### pick and roll
 
@@ -1008,7 +1008,7 @@ Since `pick` and `roll` are single-argument words (arity 1), their argument is t
 ```
 arli> 42
 42
-arli> pick 0            ;; copy top (index 0) â€” 42 must be on the stack
+arli> pick 0            ;; copy top (index 0) — 42 must be on the stack
 42
 arli> /stack
 Stack (3 items):
@@ -1023,7 +1023,7 @@ Each `pick`/`roll` adds one extra value to the stack (the return value is pushed
 
 **arity-driven parsing** and **stack-based evaluation** are two sides of the same coin. Arity tells the parser how many arguments a function consumes. The stack is where those arguments live. The parser groups expressions into trees, and the evaluator walks the tree, pushing intermediate results onto the stack as it goes.
 
-You don't need to actively manage the stack for most code â€” just write expressions naturally and let arity do the grouping. The stack is always there, accumulating results, ready for inspection with `/stack` when you need to debug or understand the flow.
+You don't need to actively manage the stack for most code — just write expressions naturally and let arity do the grouping. The stack is always there, accumulating results, ready for inspection with `/stack` when you need to debug or understand the flow.
 ---
 
 ### Chapter 10: How It All Works
@@ -1044,7 +1044,7 @@ The source text is broken into tokens: numbers, strings, symbols, and parenthese
 
 #### Step 2: Arity-Driven Parsing
 
-The parser uses an `ArityTable` â€” a mapping from symbol names to their argument counts. When it encounters a symbol with known arity N, it consumes the next N expressions as arguments:
+The parser uses an `ArityTable` — a mapping from symbol names to their argument counts. When it encounters a symbol with known arity N, it consumes the next N expressions as arguments:
 
 ```
 [Symbol("+"), Number(1), Symbol("*"), Number(2), Number(3)]
@@ -1069,11 +1069,11 @@ The evaluator walks the tree. For each list:
 
 The result is pushed onto the data stack (the Forth-like part).
 
-Special forms like `if`, `define`, `while`, and `let` have custom evaluation rules â€” they don't evaluate all their arguments eagerly. `if` evaluates only the matching branch. `define` doesn't evaluate its first argument (the name).
+Special forms like `if`, `define`, `while`, and `let` have custom evaluation rules — they don't evaluate all their arguments eagerly. `if` evaluates only the matching branch. `define` doesn't evaluate its first argument (the name).
 
 #### Step 4: Python Interop
 
-When you write `import os`, arli calls Python's `importlib.import_module("os")`. When you write `. os getcwd`, arli calls Python's `getattr(os, "getcwd")`. When you call a Python function from arli, it's a direct Python function call â€” no wrapping, no marshaling, no overhead.
+When you write `import os`, arli calls Python's `importlib.import_module("os")`. When you write `. os getcwd`, arli calls Python's `getattr(os, "getcwd")`. When you call a Python function from arli, it's a direct Python function call — no wrapping, no marshaling, no overhead.
 
 The `python` special form uses Python's `eval()` function with the current arli environment as local variables. It's an escape hatch that gives you full access to Python when you need it.
 
@@ -1083,7 +1083,7 @@ The `python` special form uses Python's `eval()` function with the current arli 
 
 **What you'll build:** A program that can inspect its own stack, transform it with list operations, and even rewrite its own code using the exec stack — the foundation for genetic programming and self-optimizing systems.
 
-So far, the stack has been a behind-the-scenes mechanism â€” results accumulate, words like `dup` and `swap` rearrange them, and `/stack` lets you peek. But what if you could **capture the stack as data**, manipulate it with list operations, and put it back? And what if there was a **second stack** â€” one that holds code instead of data â€” so programs can rewrite themselves during execution?
+So far, the stack has been a behind-the-scenes mechanism — results accumulate, words like `dup` and `swap` rearrange them, and `/stack` lets you peek. But what if you could **capture the stack as data**, manipulate it with list operations, and put it back? And what if there was a **second stack** — one that holds code instead of data — so programs can rewrite themselves during execution?
 
 This is what arli's **stack reflection** and **exec stack** provide. They're inspired by the [Push programming language](http://faculty.hampshire.edu/lspector/push.html), where programs live on stacks and self-modification is the default.
 
@@ -1093,7 +1093,7 @@ This is what arli's **stack reflection** and **exec stack** provide. They're ins
 
 Two builtins expose the data stack as a value:
 
-**`stack` (arity 0)** â€” pushes a *copy* of the current data stack as a list.
+**`stack` (arity 0)** — pushes a *copy* of the current data stack as a list.
 
 ```
 arli> 1 2 3
@@ -1108,7 +1108,7 @@ Stack (4 items):
   3: (1 2 3)
 ```
 
-The snapshot is a regular arli list. You can filter it, map over it, cons to it â€” anything you can do to a list:
+The snapshot is a regular arli list. You can filter it, map over it, cons to it — anything you can do to a list:
 
 ```
 arli> 1 "hello" 2 "world" 3
@@ -1119,7 +1119,7 @@ arli> filter number?
 (1 2 3)
 ```
 
-**`stack!` (arity 1)** â€” replaces the entire data stack with a list. Takes the new stack as an argument. Returns `None` (so exec doesn't push an extra value).
+**`stack!` (arity 1)** — replaces the entire data stack with a list. Takes the new stack as an argument. Returns `None` (so exec doesn't push an extra value).
 
 ```
 arli> stack! (list 10 20 30)
@@ -1404,10 +1404,10 @@ The main difference: Push has **typed stacks** (integer stack, float stack, bool
 
 Stack reflection and the exec stack are advanced features. Use them when:
 
-1. **You need self-modifying code** â€” programs that rewrite themselves based on runtime conditions
-2. **You want to generate code dynamically** â€” building and executing programs from data
-3. **You're exploring evolutionary computation** â€” generating, mutating, and selecting programs
-4. **You want fine-grained control over evaluation order** â€” the exec stack lets you sequence operations explicitly
+1. **You need self-modifying code** — programs that rewrite themselves based on runtime conditions
+2. **You want to generate code dynamically** — building and executing programs from data
+3. **You're exploring evolutionary computation** — generating, mutating, and selecting programs
+4. **You want fine-grained control over evaluation order** — the exec stack lets you sequence operations explicitly
 
 For everyday arli programming, the normal arity-driven style (`+ 1 2`, `if cond then else`, `defn name (params) body`) is cleaner and faster. Stack reflection is a power tool for when you need to break the normal rules.
 
@@ -1624,8 +1624,8 @@ You now know enough to write real programs in arli. Here's what I'd suggest:
 
 4. **Explore exec stack programming**. Try building a program with `exec-push` and running it with `(exec)`. Then try having the program modify itself during execution.
 
-5. **Build something real**. A file renamer. A JSON processor. A web scraper using `import requests`. arli is a scripting language â€” use it like one.
+5. **Build something real**. A file renamer. A JSON processor. A web scraper using `import requests`. arli is a scripting language — use it like one.
 
-The complete reference is in [SPEC.md](SPEC.md). The source code is in `src/arli/`. It's about 600 lines of Python â€” read it, modify it, make it your own.
+The complete reference is in [SPEC.md](SPEC.md). The source code is in `src/arli/`. It's about 600 lines of Python — read it, modify it, make it your own.
 
 And remember: parentheses aren't the enemy. They're a tool. arli just doesn't need them as often.

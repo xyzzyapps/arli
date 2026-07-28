@@ -1,4 +1,4 @@
-﻿# arli Language Specification
+# arli Language Specification
 
 **arli** (Arity-driven Lisp) is a stack-based Lisp dialect that eliminates parentheses through arity-driven parsing. It combines ideas from Forth (stack-based evaluation, concatenative operations) with Lisp (symbolic expressions, functional programming, Python interop).
 
@@ -68,7 +68,7 @@ Source Code
 | `dict` | Python dict (via `hash-map`) | `{:a 1 :b 2}` |
 
 ### Keywords
-Symbols starting with `:` are keywords â€” they self-evaluate. `:foo` evaluates to `:foo`.
+Symbols starting with `:` are keywords — they self-evaluate. `:foo` evaluates to `:foo`.
 Keywords are used as map keys and for named parameters.
 
 ### Vector/Map Literal Syntax
@@ -91,7 +91,7 @@ The parser uses an `ArityTable` mapping symbol names to their argument count:
 
 2. **Unknown / variadic (-1)**: Symbols with arity -1 (like `do`, `list`, `match`, `and`, `or`, `hash-map`) require parentheses. Inside parens, they are treated as regular symbols.
 
-3. **Inside parentheses**: The FIRST element (operator position) does NOT use arity â€” the parentheses themselves define the grouping. All SUBSEQUENT elements use arity-driven parsing.
+3. **Inside parentheses**: The FIRST element (operator position) does NOT use arity — the parentheses themselves define the grouping. All SUBSEQUENT elements use arity-driven parsing.
 
 ### Parsing Rules (Position-dependent)
 
@@ -106,9 +106,9 @@ defn-rec (always)           | N/A         | special handler regardless of positi
 
 ### Special Form Parsers
 
-- **`defn`**: `defn name (params) body...` â€” at top level, uses arity 3. Inside parens, the `defn` symbol is followed by params and body.
-- **`defn-rec`**: `(defn-rec name (params) body...)` â€” special handler that registers arity BEFORE parsing body (for recursion). Must use parens.
-- **`fn`**: `fn (params) body...` â€” at top level, uses arity 2. Creates anonymous function.
+- **`defn`**: `defn name (params) body...` — at top level, uses arity 3. Inside parens, the `defn` symbol is followed by params and body.
+- **`defn-rec`**: `(defn-rec name (params) body...)` — special handler that registers arity BEFORE parsing body (for recursion). Must use parens.
+- **`fn`**: `fn (params) body...` — at top level, uses arity 2. Creates anonymous function.
 
 ### Parsing Examples
 
@@ -129,9 +129,9 @@ define double (fn (x) (* x 2)) | [define, double, [fn, [x], [*, x, 2]]]
 | Shorthand | Token | Expands to | Status |
 |-----------|-------|------------|--------|
 | `'expr` | `TOKEN_QUOTE` | `(quote expr)` | Implemented |
-| `` `expr `` | `TOKEN_QUASIQUOTE` | `(quasiquote expr)` | Tokenized only â€” evaluation not yet implemented |
-| `,expr` | `TOKEN_UNQUOTE` | `(unquote expr)` | Tokenized only â€” evaluation not yet implemented |
-| `,@expr` | `TOKEN_UNQUOTE_SPLICE` | `(unquote-splicing expr)` | Tokenized only â€” evaluation not yet implemented |
+| `` `expr `` | `TOKEN_QUASIQUOTE` | `(quasiquote expr)` | Tokenized only — evaluation not yet implemented |
+| `,expr` | `TOKEN_UNQUOTE` | `(unquote expr)` | Tokenized only — evaluation not yet implemented |
+| `,@expr` | `TOKEN_UNQUOTE_SPLICE` | `(unquote-splicing expr)` | Tokenized only — evaluation not yet implemented |
 
 ## Complete Arity Table
 
@@ -153,14 +153,14 @@ Every operator and special form in arli has a documented arity. **All operators 
 | `set!` (nested) | 3 | `set! obj key value` | Mutate dict/list element: `(set! m :key val)` or `(set! lst idx val)` |
 | `cond` | 1 | `cond clauses` | Multi-branch conditional (clauses is a flat list of test result pairs) |
 | `quote` | 1 | `quote expr` | Return expression unevaluated |
-| `do` | -1 | `(do expr...)` | Evaluate sequence, return last (variadic â€” requires parens) |
+| `do` | -1 | `(do expr...)` | Evaluate sequence, return last (variadic — requires parens) |
 | `import` | 1 | `import module` | Import Python module by name |
 | `import!` | 2 | `import! module alias` | Import Python module with alias |
 | `.` | 2 | `. obj attr` | Attribute access / method call (arity 2 for top-level attribute access; chains inside parens) |
 | `host` | 1 | `host "code"` | Evaluate arbitrary host language expression string |
 | `assert` | 2 | `assert expr message` | Raise AssertionError if expr is falsy |
-| `doc` | -1 | `(doc sym)` / `(doc sym "text")` | Retrieve or store documentation (variadic â€” requires parens) |
-| `match` | -1 | `(match val clause...)` | Pattern matching (variadic â€” requires parens) |
+| `doc` | -1 | `(doc sym)` / `(doc sym "text")` | Retrieve or store documentation (variadic — requires parens) |
+| `match` | -1 | `(match val clause...)` | Pattern matching (variadic — requires parens) |
 | `import-module` | 1 | `import-module "path"` | Load and execute an `.arli` file |
 | `defn-fexpr` | 3 | `defn-fexpr name (params) body` | Define f-expression (creates function that doesn't evaluate its arguments) |
 | `eval` | 1 | `eval form` | Evaluate a form (expression) in the current environment |
@@ -196,8 +196,8 @@ All builtins have known arities (>= 0) except where noted. All can be used witho
 
 | Word | Arity | Description |
 |------|-------|-------------|
-| `and` | -1 | Short-circuit AND (variadic â€” requires parens) |
-| `or` | -1 | Short-circuit OR (variadic â€” requires parens) |
+| `and` | -1 | Short-circuit AND (variadic — requires parens) |
+| `or` | -1 | Short-circuit OR (variadic — requires parens) |
 | `not` | 1 | Logical NOT |
 
 #### Stack Operations (Forth-like)
@@ -223,7 +223,7 @@ All builtins have known arities (>= 0) except where noted. All can be used witho
 
 #### Exec Stack Operations (Push-style)
 
-The exec stack holds pending code forms for self-modifying programs. It is the call stack â€” every function call pushes its body and a `__restore_env__` sentinel onto it.
+The exec stack holds pending code forms for self-modifying programs. It is the call stack — every function call pushes its body and a `__restore_env__` sentinel onto it.
 
 | Word | Arity | Description |
 |------|-------|-------------|
@@ -252,7 +252,7 @@ Special forms supported inside `(exec)`:
 | `cons` | 2 | Prepend item to list |
 | `car` | 1 | First element of list |
 | `cdr` | 1 | Rest of list (all but first) |
-| `list` | -1 | Create list (variadic â€” requires parens) |
+| `list` | -1 | Create list (variadic — requires parens) |
 | `nil?` | 1 | Check if nil |
 | `list?` | 1 | Check if list |
 
@@ -268,7 +268,7 @@ Special forms supported inside `(exec)`:
 
 | Word | Arity | Description |
 |------|-------|-------------|
-| `hash-map` | -1 | Create dict from key-value pairs (variadic â€” requires parens) |
+| `hash-map` | -1 | Create dict from key-value pairs (variadic — requires parens) |
 
 #### I/O
 
@@ -296,14 +296,14 @@ Special forms supported inside `(exec)`:
 | `Ok` | 1 | Create success result: `(Ok 42)` |
 | `Err` | 1 | Create error result: `(Err "msg")` |
 | `map-ok` | 2 | Transform Ok value: `(map-ok result fn)` |
-| `and-then` | 2 | Chain Ok result: `(and-then result fn)` â€” passes through Err |
-| `or-else` | 2 | Recover from Err: `(or-else result fn)` â€” passes through Ok |
+| `and-then` | 2 | Chain Ok result: `(and-then result fn)` — passes through Err |
+| `or-else` | 2 | Recover from Err: `(or-else result fn)` — passes through Ok |
 
 #### Testing
 
 | Word | Arity | Description |
 |------|-------|-------------|
-| `assert` | 2 | `(assert expr message)` â€” raises if expr is falsy |
+| `assert` | 2 | `(assert expr message)` — raises if expr is falsy |
 
 #### Documentation
 
@@ -422,7 +422,7 @@ This enables custom control structures, domain-specific languages, and lazy eval
 `defn-fexpr` creates an fexpr function. Like `defn`, it takes 3 arguments: name, parameter list, and body expression.
 
 ```clojure
-;; Define a custom conditional â€” no parens needed (arity 3)
+;; Define a custom conditional — no parens needed (arity 3)
 defn-fexpr my-if (c t e)
     if (eval c) (eval t) (eval e)
 
@@ -580,7 +580,7 @@ python "x * 2"             ;; -> 84 (environment variables available)
 
 ### Keywords
 
-Symbols starting with `:` â€” self-evaluate. Used as map keys.
+Symbols starting with `:` — self-evaluate. Used as map keys.
 
 ### Unicode Symbols
 
@@ -632,12 +632,12 @@ python "{'a': 1}"          ;; evaluate Python expression
 
 - Multi-line input (blank line terminates expression)
 - Meta-commands:
-  - `/stack` â€” inspect data stack
-  - `/env` â€” view environment
-  - `/arity` â€” view arity table
-  - `/clear` â€” clear stack
-  - `/debug` â€” toggle debug tracing
-  - `/reset` â€” reset evaluator
+  - `/stack` — inspect data stack
+  - `/env` — view environment
+  - `/arity` — view arity table
+  - `/clear` — clear stack
+  - `/debug` — toggle debug tracing
+  - `/reset` — reset evaluator
 
 ## Backend Comparison
 

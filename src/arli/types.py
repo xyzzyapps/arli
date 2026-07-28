@@ -1,4 +1,4 @@
-﻿"""Core data types for arli.
+"""Core data types for arli.
 
 arli's type system is minimal:
 - Numbers (int, float)

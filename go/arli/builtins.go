@@ -1,4 +1,4 @@
-﻿package main
+package main
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ func getBuiltins() map[string]*ArliBuiltin {
 		b[name] = &ArliBuiltin{Name: name, Fn: fn, Arity: arity}
 	}
 
-	// Arithmetic â€” return int when both args are int
+	// Arithmetic — return int when both args are int
 	add("+", func(args []ArliValue, ev *Evaluator) (ArliValue, error) {
 		if ai, aok := args[0].(ArliInt); aok {
 			if bi, bok := args[1].(ArliInt); bok {
@@ -101,7 +101,7 @@ func getBuiltins() map[string]*ArliBuiltin {
 
 	// Logic
 	add("and", func(args []ArliValue, ev *Evaluator) (ArliValue, error) {
-		// Short-circuit AND â€” variadic
+		// Short-circuit AND — variadic
 		for _, arg := range args {
 			if !IsTruthy(arg) {
 				return arg, nil
@@ -113,7 +113,7 @@ func getBuiltins() map[string]*ArliBuiltin {
 		return True, nil
 	}, -1)
 	add("or", func(args []ArliValue, ev *Evaluator) (ArliValue, error) {
-		// Short-circuit OR â€” variadic
+		// Short-circuit OR — variadic
 		for _, arg := range args {
 			if IsTruthy(arg) {
 				return arg, nil
@@ -279,7 +279,7 @@ func getBuiltins() map[string]*ArliBuiltin {
 		return Nil, nil
 	}, 1)
 	add(".", func(args []ArliValue, ev *Evaluator) (ArliValue, error) {
-		// Forth-style dot â€” print value (same as print with arity 1)
+		// Forth-style dot — print value (same as print with arity 1)
 		if len(args) > 0 {
 			fmt.Print(args[0].ArliRepr())
 		}
@@ -513,7 +513,7 @@ func getBuiltins() map[string]*ArliBuiltin {
 		return ev.evalExpr(top)
 	}, 0)
 
-	// exec (variadic, parens required): Push interpreter â€” process exec stack until empty
+	// exec (variadic, parens required): Push interpreter — process exec stack until empty
 	add("exec", func(args []ArliValue, ev *Evaluator) (ArliValue, error) {
 		if ev == nil {
 			return Nil, nil

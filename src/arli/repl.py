@@ -1,4 +1,4 @@
-﻿"""Interactive REPL for arli.
+"""Interactive REPL for arli.
 
 Provides a Read-Eval-Print Loop with:
 - Full arity-driven parsing
@@ -138,7 +138,7 @@ class REPL:
                     self.evaluator.stack.append(result)
                     print(arli_repr(result))
         except SyntaxError as e:
-            # Maybe it's a partial expression â€” try wrapping in parens
+            # Maybe it's a partial expression — try wrapping in parens
             raise e
 
     def _handle_command(self, cmd: str) -> None:
@@ -208,7 +208,7 @@ class REPL:
 
     def _show_help(self) -> None:
         """Display help."""
-        print("arli â€” Arity-driven Forth-like Lisp")
+        print("arli — Arity-driven Forth-like Lisp")
         print()
         print("Basic syntax:")
         print("  + 1 2          ; arity-driven, no parens needed")

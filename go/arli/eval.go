@@ -1,4 +1,4 @@
-﻿package main
+package main
 
 import (
 	"fmt"
@@ -41,7 +41,7 @@ func (ev *Evaluator) loadBuiltins() {
 			ev.Arities.Register(name, b.Arity)
 		}
 	}
-	// Special form arities â€” ALL fixed, matching Python backend
+	// Special form arities — ALL fixed, matching Python backend
 	ev.Arities.Register("define", 2)   // define name value
 	ev.Arities.Register("quote", 1)    // quote expr
 	ev.Arities.Register("do", -1)      // do -> variadic (use parens)
@@ -471,7 +471,7 @@ func (ev *Evaluator) evalExpr(expr ArliValue) (ArliValue, error) {
 			return result, err
 		}
 
-		// IMPORT â€” Go module import via reflection
+		// IMPORT — Go module import via reflection
 		if name == "import" || name == "import!" {
 			if len(v) < 2 {
 				return nil, fmt.Errorf("import expects (import module-name)")
@@ -499,7 +499,7 @@ func (ev *Evaluator) evalExpr(expr ArliValue) (ArliValue, error) {
 			return mod, nil
 		}
 
-		// DOT â€” chained attribute access
+		// DOT — chained attribute access
 		if name == "." {
 			if len(v) < 3 {
 				return nil, fmt.Errorf(". expects (. obj attr...)")
@@ -542,7 +542,7 @@ func (ev *Evaluator) evalExpr(expr ArliValue) (ArliValue, error) {
 			return obj, nil
 		}
 
-		// GO â€” evaluate arbitrary Go expression string (placeholder)
+		// GO — evaluate arbitrary Go expression string (placeholder)
 		if name == "host" {
 			if len(v) < 2 {
 				return nil, fmt.Errorf("go expects (go \"code\")")
@@ -576,7 +576,7 @@ func (ev *Evaluator) evalExpr(expr ArliValue) (ArliValue, error) {
 			return val, nil
 		}
 
-		// DOC: (doc symbol) â€” retrieve documentation
+		// DOC: (doc symbol) — retrieve documentation
 		if name == "doc" {
 			if len(v) >= 2 {
 				sym := v[1]
@@ -590,7 +590,7 @@ func (ev *Evaluator) evalExpr(expr ArliValue) (ArliValue, error) {
 			return Nil, nil
 		}
 
-		// DOC!: (doc! symbol "text") â€” store documentation
+		// DOC!: (doc! symbol "text") — store documentation
 		if name == "doc!" {
 			if len(v) >= 3 {
 				sym := v[1]

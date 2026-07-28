@@ -1,4 +1,4 @@
-﻿package main
+package main
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// ArliValue interface â€” every value in Arli implements this
+// ArliValue interface — every value in Arli implements this
 // ---------------------------------------------------------------------------
 
 type ArliValue interface {
@@ -43,7 +43,7 @@ type ArliSymbol string
 func (v ArliSymbol) ArliRepr() string { return string(v) }
 
 // ---------------------------------------------------------------------------
-// Nil â€” singleton false value
+// Nil — singleton false value
 // ---------------------------------------------------------------------------
 
 type ArliNil struct{}
@@ -105,7 +105,7 @@ func (l ArliList) ArliRepr() string {
 }
 
 // ---------------------------------------------------------------------------
-// Builtin â€” Go function wrapped with arity
+// Builtin — Go function wrapped with arity
 // ---------------------------------------------------------------------------
 
 type ArliBuiltin struct {
@@ -121,7 +121,7 @@ func (b *ArliBuiltin) Call(args []ArliValue, ev *Evaluator) (ArliValue, error) {
 }
 
 // ---------------------------------------------------------------------------
-// Function â€” user-defined closure
+// Function — user-defined closure
 // ---------------------------------------------------------------------------
 
 type ArliFn struct {
@@ -145,7 +145,7 @@ func (f *ArliFn) ArliRepr() string {
 }
 
 // ---------------------------------------------------------------------------
-// GoValue â€” wraps a Go value for interop
+// GoValue — wraps a Go value for interop
 // ---------------------------------------------------------------------------
 
 type GoValue struct {

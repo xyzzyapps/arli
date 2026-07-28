@@ -1,4 +1,4 @@
-﻿"""Stack-based evaluator for arli.
+"""Stack-based evaluator for arli.
 
 Evaluation model (Forth-like + Lisp):
 1. Expressions are evaluated left-to-right, top-down
@@ -64,8 +64,8 @@ class Evaluator:
             if builtin.arity >= 0:
                 self.arity_table.register(name, builtin.arity)
             # arity -1 (variadic) means the symbol is registered but with
-            # 'variadic' marker â€” user must use parens
-        # Special form arities â€” ALL fixed, no parens needed
+            # 'variadic' marker — user must use parens
+        # Special form arities — ALL fixed, no parens needed
         self.arity_table.register("define", 2)   # define name value
         self.arity_table.register("quote", 1)    # quote expr
         self.arity_table.register("do", -1)      # do -> variadic (use parens)
@@ -396,7 +396,7 @@ class Evaluator:
                                 f"'{type(obj).__name__}' "
                                 f"has no attribute '{attr_name}'")
                     else:
-                        # Not a symbol â€” start of call args
+                        # Not a symbol — start of call args
                         break
                 # If we have remaining items, call the result
                 if i < len(expr):
@@ -441,7 +441,7 @@ class Evaluator:
                     raise AssertionError(f"Assertion failed: {arli_repr(msg)}")
                 return val
 
-            # DOC: (doc symbol) â€” retrieve documentation
+            # DOC: (doc symbol) — retrieve documentation
             if isinstance(head, Symbol) and head.name == "doc":
                 if len(expr) >= 2:
                     sym = expr[1]
@@ -451,7 +451,7 @@ class Evaluator:
                             return doc_val
                 return nil
 
-            # DOC!: (doc! symbol "text") â€” store documentation
+            # DOC!: (doc! symbol "text") — store documentation
             if isinstance(head, Symbol) and head.name == "doc!":
                 if len(expr) >= 3:
                     sym = expr[1]

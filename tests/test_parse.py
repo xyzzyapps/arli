@@ -1,4 +1,4 @@
-﻿"""Tests for the arli arity-driven parser."""
+"""Tests for the arli arity-driven parser."""
 
 import sys
 import os
@@ -76,7 +76,7 @@ def test_mixed():
 
 
 def test_defn_parsed_as_arity3():
-    """defn at top-level (no parens) uses arity 3 â€” produces flat list."""
+    """defn at top-level (no parens) uses arity 3 — produces flat list."""
     table = ArityTable()
     table.register("defn", 3)
     table.register("+", 2)

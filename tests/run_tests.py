@@ -1,5 +1,5 @@
-﻿#!/usr/bin/env python3
-"""Common test runner for arli â€” runs .arli test files and verifies outputs.
+#!/usr/bin/env python3
+"""Common test runner for arli — runs .arli test files and verifies outputs.
 
 Usage:
     python tests/run_tests.py              # test Python backend

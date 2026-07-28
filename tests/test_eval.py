@@ -1,4 +1,4 @@
-﻿"""Python-specific evaluator tests â€” features not testable via common .arli tests.
+"""Python-specific evaluator tests — features not testable via common .arli tests.
 
 These test Python backend internals and interop that the Go backend can't run.
 """

@@ -1,12 +1,12 @@
 ;; Fibonacci sequence -- recursive and iterative in Arli
-
-;; Recursive fibonacci without parentheses
+;;
+;; 100% Parenthesis-free recursive fibonacci
 defn-rec fib (n)
-    if (= n 0)
+    if = n 0
         0
-        if (= n 1)
+        if = n 1
             1
-            + fib (- n 1) fib (- n 2)
+            + fib - n 1 fib - n 2
 
 print "fib(10) ="
 print fib 10
@@ -15,12 +15,12 @@ print fib 10
 defn fib-iter (n)
     let ((a 0) (b 1) (i 0))
         (do
-            (while (< i n)
-                (let ((temp b))
+            while < i n
+                let ((temp b))
                     (do
-                        (set! b + a b)
-                        (set! a temp)
-                        (set! i + i 1))))
+                        set! b + a b
+                        set! a temp
+                        set! i + i 1)
             a)
 
 print "fib-iter(10) ="

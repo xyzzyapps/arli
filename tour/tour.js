@@ -121,7 +121,7 @@ square add 3 4
     `,
     code: `;; Factorial without parentheses:
 defn fact (n)
-    if (= n 0)
+    if = n 0
         1
         * n fact - n 1
 
@@ -129,11 +129,11 @@ print fact 5
 
 ;; Fibonacci without parentheses:
 defn-rec fib (n)
-    if (= n 0)
+    if = n 0
         0
-        if (= n 1)
+        if = n 1
             1
-            + fib (- n 1) fib (- n 2)
+            + fib - n 1 fib - n 2
 
 print fib 10
 `
@@ -184,8 +184,8 @@ print apply-composed 'inc 'add
     `,
     code: `define score 88
 
-;; if (arity 3):
-if (>= score 90) "Excellent" "Good"
+;; if (arity 3, no parens on comparison):
+if >= score 90 "Excellent" "Good"
 
 ;; cond multi-branch:
 cond (
@@ -208,12 +208,12 @@ cond (
       </ul>
       <p>When you need multiple expressions inside a loop body, sequence them with <code>(do ...)</code>.</p>
     `,
-    code: `;; while loop
+    code: `;; while loop (no parens around condition or set!)
 define counter 0
-while (< counter 4)
+while < counter 4
     (do
-        (print counter)
-        (set! counter + counter 1))
+        print counter
+        set! counter + counter 1)
 
 ;; for loop over a list
 for item [10 20 30]
@@ -233,8 +233,8 @@ for item [10 20 30]
 
 let ((x 10) (y 20))
     (do
-        (print "Inside let:")
-        (print + x y))
+        print "Inside let:"
+        print + x y)
 
 print "Outside let:"
 print x
@@ -386,7 +386,7 @@ print docstring
       </ul>
     `,
     code: `defn safe-div (a b)
-    if (= b 0)
+    if = b 0
         (Err "Division by zero!")
         (Ok / a b)
 
@@ -436,16 +436,16 @@ print describe-shape [:rect 4 5]
     `,
     code: `;; Custom short-circuiting conditional:
 defn-fexpr my-if (cond-expr then-expr else-expr)
-    if (eval cond-expr)
-        (eval then-expr)
-        (eval else-expr)
+    if eval cond-expr
+        eval then-expr
+        eval else-expr
 
 print my-if true "Evaluated True!" (print "Never executed")
 
 ;; Custom short-circuiting OR:
 defn-fexpr short-or (a b)
-    let ((av (eval a)))
-        if av av (eval b)
+    let ((av eval a))
+        if av av eval b
 
 print short-or true (print "Never runs")
 print short-or false "Evaluated second branch"
@@ -464,7 +464,7 @@ print ast-inspect (+ 10 (* 20 30))
       <ul>
         <li><code>doc! symbol "description"</code> — attach docstring</li>
         <li><code>doc symbol</code> — retrieve docstring</li>
-        <li><code>(assert expr "error message")</code> — assert truthiness</li>
+        <li><code>assert expr "error message"</code> — assert truthiness</li>
       </ul>
     `,
     code: `defn add (x y) + x y
@@ -472,8 +472,8 @@ doc! add "Adds two numbers and returns the sum."
 
 print doc add
 
-;; Assert test:
-(assert (= (add 2 3) 5) "Addition test failed")
+;; Assert test (arity 2: assert expr message)
+assert = add 2 3 5 "Addition test failed"
 print "Assertion passed successfully!"
 `
   },

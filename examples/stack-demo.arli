@@ -1,39 +1,35 @@
-;; Hya Stack Operations Demo
+;; Arli Stack Operations Demo
 ;; Demonstrates Forth-like stack operations with arity-driven syntax
 
 print "=== Stack Operations Demo ==="
 
 ;; dup - duplicate top of stack
-print "dup 5 ->"
+print "dup 5:"
 dup 5
-print stack[-1]  ;; should be 5, stack has [5, 5]
+print stack
 
-;; Clear stack - print a value and keep it
-print "---"
-print "swap 1 2 ->"
+;; swap - swap top two values
+print "swap 1 2:"
 swap 1 2
-print "top:", stack[-1]  ;; 1
-print "next:", stack[-2] ;; 2
+print stack
 
-;; Arity-driven arithmetic on stack
-print "---"
+;; Arity-driven prefix operations
 print "Stack arithmetic: + 1 2"
 + 1 2
-print "Result on stack:", stack[-1]  ;; 3
+print stack
 
-;; Chain operations via arity
-print "---"
-print "* + 1 2 3  ->  (* (+ 1 2) 3) = 9"
+;; Chained operations via arity
+print "* + 1 2 3:"
 * + 1 2 3
-print "Result on stack:", stack[-1]  ;; 9
+print stack
 
 ;; Using drop
-print "---"
-print "drop removes top of stack"
+print "drop 99:"
 drop 99
-print "After drop, top:", stack[-1] if stack else "empty"
+print stack
 
 ;; Over: (a b) -> (a b a)
-print "---"
-print "over duplicates second item"
-print over 1 2  ;; prints (1, 2, 1) and leaves [1, 2, 1] on stack
+print "over 1 2:"
+over 1 2
+print stack
+

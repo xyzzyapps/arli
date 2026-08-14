@@ -13,13 +13,13 @@
 defn add (x y) + x y
 add 1 2           ;; => 3  (add has arity 2)
 
-;; Recursive fibonacci — no parens needed (defn & defn-rec register arity before body)
+;; Recursive fibonacci — 100% parenthesis-free body
 defn-rec fib (n)
-    if (= n 0)
+    if = n 0
         0
-        if (= n 1)
+        if = n 1
             1
-            + fib (- n 1) fib (- n 2)
+            + fib - n 1 fib - n 2
 
 print fib 10      ;; prints 55
 ```
@@ -137,7 +137,7 @@ quote + 1 2        ;; quote (quote=1)
 cond clauses       ;; multi-branch (cond=1)
 fn (x) * x 2       ;; anonymous function (fn=2)
 defn add (x y) + x y  ;; function definition (defn=3)
-defn-rec fact (n) if (= n 0) 1 * n fact (- n 1) ;; recursive function (defn-rec=3)
+defn-rec fact (n) if = n 0 1 * n fact - n 1 ;; recursive function (defn-rec=3)
 ```
 
 ### Parentheses required (unknown/variadic arity)
@@ -165,11 +165,11 @@ Parenthesis elimination in Arli is **static (parse-time)**, based on registered 
    ```clojure
    ;; Composing f(g(1, 2)):
    defn apply2 (f g) (f (g 1 2))
-   apply2 inc add  ;; => 4
+   apply2 'inc 'add  ;; => 4
 
    ;; Composing f(g(1), 2):
    defn apply2 (f g) (f (g 1) 2)
-   apply2 add inc  ;; => 4
+   apply2 'add 'inc  ;; => 4
    ```
 
 ### Stack Operations
@@ -220,15 +220,15 @@ Define functions that **don't evaluate their arguments eagerly** — use `defn-f
 ```clojure
 ;; Custom if — no parens needed (arity 3)
 defn-fexpr my-if (c t e)
-    if (eval c) (eval t) (eval e)
+    if eval c eval t eval e
 
 my-if true "yes" "no"      ;; -> "yes"
 my-if false "yes" "no"     ;; -> "no"
 
 ;; Short-circuit OR
 defn-fexpr short-or (a b)
-    let ((av (eval a)))
-        if av av (eval b)
+    let ((av eval a))
+        if av av eval b
 
 short-or true (print "never runs")     ;; -> True, no side effect
 short-or false (print "runs")           ;; prints "runs", returns nil

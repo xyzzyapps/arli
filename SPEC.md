@@ -273,9 +273,9 @@ Special forms supported inside `(exec)`:
 
 | Word | Arity | Description |
 |------|-------|-------------|
-| `map` | 2 | Apply function to each element: `(map fn list)` |
-| `filter` | 2 | Keep elements where function returns truthy |
-| `reduce` | 3 | Accumulate: `(reduce fn init list)` |
+| `map` | 2 | Apply function to each element: `map fn list` |
+| `filter` | 2 | Keep elements where function returns truthy: `filter fn list` |
+| `reduce` | 3 | Accumulate: `reduce fn init list` |
 
 #### Data Structures
 
@@ -287,7 +287,7 @@ Special forms supported inside `(exec)`:
 
 | Word | Arity | Description |
 |------|-------|-------------|
-| `print` | 1 | Print value followed by newline |
+| `print` | 1 | Print value followed by newline: `print val` |
 | `.` | 2 | Attribute access / method call. At top level: `. obj attr`. Inside parens chains: `(. obj attr1 attr2 args...)` |
 | `read` | 0 | Read a line from stdin |
 
@@ -297,26 +297,26 @@ Special forms supported inside `(exec)`:
 
 | Word | Arity | Description |
 |------|-------|-------------|
-| `number?` | 1 | Check if value is int or float |
-| `string?` | 1 | Check if value is string |
-| `symbol?` | 1 | Check if value is Symbol |
-| `fn?` | 1 | Check if value is callable (Builtin or Function) |
+| `number?` | 1 | Check if value is int or float: `number? x` |
+| `string?` | 1 | Check if value is string: `string? s` |
+| `symbol?` | 1 | Check if value is Symbol: `symbol? sym` |
+| `fn?` | 1 | Check if value is callable (Builtin or Function): `fn? f` |
 
 #### Result Type Constructors & Combinators
 
 | Word | Arity | Description |
 |------|-------|-------------|
-| `Ok` | 1 | Create success result: `(Ok 42)` |
-| `Err` | 1 | Create error result: `(Err "msg")` |
-| `map-ok` | 2 | Transform Ok value: `(map-ok result fn)` |
-| `and-then` | 2 | Chain Ok result: `(and-then result fn)` — passes through Err |
-| `or-else` | 2 | Recover from Err: `(or-else result fn)` — passes through Ok |
+| `Ok` | 1 | Create success result: `Ok 42` |
+| `Err` | 1 | Create error result: `Err "msg"` |
+| `map-ok` | 2 | Transform Ok value: `map-ok result fn` |
+| `and-then` | 2 | Chain Ok result: `and-then result fn` — passes through Err |
+| `or-else` | 2 | Recover from Err: `or-else result fn` — passes through Ok |
 
 #### Testing
 
 | Word | Arity | Description |
 |------|-------|-------------|
-| `assert` | 2 | `(assert expr message)` — raises if expr is falsy |
+| `assert` | 2 | `assert expr message` — raises if expr is falsy |
 
 #### Documentation
 

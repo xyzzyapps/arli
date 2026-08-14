@@ -9,6 +9,10 @@ import (
 
 func main() {
 	if len(os.Args) > 1 {
+		if os.Args[1] == "-e" && len(os.Args) > 2 {
+			runString(os.Args[2])
+			return
+		}
 		// Run file
 		runFile(os.Args[1])
 		return
@@ -16,6 +20,25 @@ func main() {
 
 	// REPL
 	repl()
+}
+
+func runString(source string) {
+	ev := NewEvaluator()
+	tokens := Tokenize(source)
+	stream := NewTokenStream(tokens)
+	for !stream.IsEOF() {
+		expr := ev.parser.parseExpr(stream, true)
+		if expr != nil {
+			result, err := ev.Eval(expr)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			if result != nil {
+				fmt.Println(result.ArliRepr())
+			}
+		}
+	}
 }
 
 func runFile(path string) {

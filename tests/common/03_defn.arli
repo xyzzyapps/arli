@@ -1,28 +1,29 @@
 ;; Hya common test: function definition and calling
 ;;
-;; test: define and call simple function
-(defn add (x y) (+ x y))
+;; test: define and call simple function without parens
+defn add (x y) + x y
 ;; expect: <fn add>
 add 1 2
 ;; expect: 3
 
 ;; test: function with single argument
-(defn double (x) (* x 2))
+defn double (x) * x 2
 ;; expect: <fn double>
 double 5
 ;; expect: 10
 
 ;; test: anonymous function via define
-define triple (fn (x) (* x 3))
+define triple fn (x) * x 3
 ;; expect: <fn anon>
 triple 5
 ;; expect: 15
 
 ;; test: function returning constant
-(defn answer () 42)
+defn answer () 42
 ;; expect: <fn answer>
 answer
 ;; expect: 42
+
 
 
 

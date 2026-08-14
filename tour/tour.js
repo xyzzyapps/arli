@@ -17,22 +17,50 @@ const LESSONS = [
       <h2>Welcome to Arli</h2>
       <p><strong>Arli</strong> (Arity-driven Lisp) is a Forth-like Lisp dialect designed around a simple yet powerful idea: <strong>arity-driven parenthesis elimination</strong>.</p>
       <p>In traditional Lisps, every function application requires parentheses: <code>(+ 1 (* 2 3))</code>. In Arli, if the arity (number of arguments) of an operator is known, you don't need parentheses at all!</p>
-      <p>Arli combines:</p>
+      
+      <h3>FizzBuzz in Arli</h3>
+      <p>Here is a complete FizzBuzz program demonstrating Arli's clean, prefix syntax:</p>
+      <pre><code>defn fizzbuzz (n)
+    let ((i 1))
+        while &lt;= i n
+            (do
+                if = 0 % i 15
+                    print "FizzBuzz"
+                    if = 0 % i 3
+                        print "Fizz"
+                        if = 0 % i 5
+                            print "Buzz"
+                            print i
+                set! i + i 1)
+
+fizzbuzz 15</code></pre>
+
+      <p>Notice how:</p>
       <ul>
-        <li><strong>Arity-Driven S-Expressions</strong>: Zero-parenthesis prefix code.</li>
-        <li><strong>Forth Data Stack</strong>: Native stack operations (<code>dup</code>, <code>swap</code>, <code>rot</code>).</li>
-        <li><strong>Push-style Exec Stack</strong>: Self-modifying code & metaprogramming.</li>
-        <li><strong>Lexical Closures</strong>: First-class functions and lexical scoping.</li>
+        <li><code>defn</code> (3), <code>while</code> (2), <code>if</code> (3), <code>set!</code> (2), <code>print</code> (1), <code>=</code> (2), <code>%</code> (2), and <code>+</code> (2) all consume their arguments based on fixed arity with <strong>zero outer parentheses</strong>.</li>
+        <li><code>(do ...)</code> sequences multiple expressions inside the loop body.</li>
       </ul>
+
       <div class="info-box">
-        <p><strong>Try it!</strong> Click <strong>Run</strong> (or press <code>Ctrl+Enter</code>) on the right to evaluate the code in your browser.</p>
+        <p><strong>Try it!</strong> Click <strong>Run</strong> (or press <code>Ctrl+Enter</code>) on the right to execute FizzBuzz directly in your browser.</p>
       </div>
     `,
-    code: `;; Welcome to Arli!
-print "Welcome to Arli!"
+    code: `;; FizzBuzz in Arli — Parenthesis-Free Prefix Style!
+defn fizzbuzz (n)
+    let ((i 1))
+        while <= i n
+            (do
+                if = 0 % i 15
+                    print "FizzBuzz"
+                    if = 0 % i 3
+                        print "Fizz"
+                        if = 0 % i 5
+                            print "Buzz"
+                            print i
+                set! i + i 1)
 
-;; Arithmetic without parentheses:
-+ 10 20
+print "=== FizzBuzz from 1 to 15 ==="
+fizzbuzz 15
 `
   },
   {

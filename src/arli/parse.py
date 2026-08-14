@@ -76,8 +76,10 @@ class Parser:
             return Symbol(tok[1])
         if tt == TOKEN_SYMBOL:
             name = tok[1]
-            if name == "defn-rec":
+            if name in ("defn", "defn-rec"):
                 return self._parse_defn_rec(stream)
+            if name == "defn-fexpr":
+                return self._parse_defn_fexpr(stream)
             if not allow_arity:
                 return Symbol(name)
             arity = self.arity_table.get(name)
@@ -113,7 +115,7 @@ class Parser:
                 if is_first and isinstance(expr, Symbol) and expr.name == 'quote':
                     quoted_form = True
                 if (is_first and isinstance(expr, list) and len(expr) > 0
-                        and isinstance(expr[0], Symbol) and expr[0].name == 'defn'
+                        and isinstance(expr[0], Symbol) and expr[0].name in ('defn', 'defn-rec', 'defn-fexpr')
                         and stream.peek() is not None and stream.peek()[0] == TOKEN_CLOSE):
                     stream.next(); return expr
                 items.append(expr)
@@ -169,18 +171,7 @@ class Parser:
         return param_syms
 
     def _parse_defn(self, stream: TokenStream) -> list[Any]:
-        name_sym = self._parse_name_sym(stream)
-        param_syms = self._parse_params_list(stream)
-        self.arity_table.register(name_sym.name, len(param_syms))
-        body: list[Any] = []
-        while True:
-            tok = stream.peek()
-            if tok is None or tok[0] in (TOKEN_CLOSE, TOKEN_VECTOR_CLOSE, TOKEN_MAP_CLOSE):
-                break
-            expr = self._parse_expr(stream, True)
-            if expr is not None:
-                body.append(expr)
-        return [Symbol("defn"), name_sym, param_syms] + (body or [nil])
+        return self._parse_defn_rec(stream)
 
     def _parse_fn(self, stream: TokenStream) -> list[Any]:
         param_syms = self._parse_params_list(stream)
@@ -207,6 +198,18 @@ class Parser:
             if expr is not None:
                 body.append(expr)
         return [Symbol("defn"), name_sym, param_syms] + (body or [nil])
+
+    def _parse_defn_fexpr(self, stream: TokenStream) -> list[Any]:
+        name_sym = self._parse_name_sym(stream)
+        param_syms = self._parse_params_list(stream)
+        self.arity_table.register(name_sym.name, len(param_syms))
+        body: list[Any] = []
+        tok = stream.peek()
+        if tok is not None and tok[0] not in (TOKEN_CLOSE, TOKEN_VECTOR_CLOSE, TOKEN_MAP_CLOSE):
+            expr = self._parse_expr(stream, True)
+            if expr is not None:
+                body.append(expr)
+        return [Symbol("defn-fexpr"), name_sym, param_syms] + (body or [nil])
 
 
 def parse_source(source: str, arity_table: Optional[ArityTable] = None) -> list[Any]:

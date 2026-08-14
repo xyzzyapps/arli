@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A Tour of Arli — Interactive Arity-Driven Forth-Like Lisp</title>
+
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Take an interactive tour of Arli, an arity-driven Forth-like Lisp programming language that eliminates parentheses with fixed-arity parsing, first-class F-expressions, and stack metaprogramming.">
+  <meta name="keywords" content="Arli, Lisp, Forth, Programming Language, Arity-driven, Parenthesis elimination, F-expressions, Functional Programming, Language Tour, Interactive REPL">
+  <meta name="author" content="Arli Language Team">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://xyzzyapps.github.io/arli/tour/">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://xyzzyapps.github.io/arli/tour/">
+  <meta property="og:title" content="A Tour of Arli — Interactive Arity-Driven Forth-Like Lisp">
+  <meta property="og:description" content="Learn Arli in your browser: zero-parenthesis prefix arithmetic, recursion without parens, Forth stack manipulation, and first-class F-expressions.">
+  <meta property="og:site_name" content="Arli Programming Language">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://xyzzyapps.github.io/arli/tour/">
+  <meta name="twitter:title" content="A Tour of Arli — Interactive Arity-Driven Forth-Like Lisp">
+  <meta name="twitter:description" content="Explore Arli: An arity-driven Forth-like Lisp dialect with zero-parenthesis syntax and first-class F-expressions.">
+
+  <!-- AEO (Answer Engine Optimization) & Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Arli",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Cross-platform",
+        "description": "An arity-driven Forth-like Lisp dialect eliminating parentheses through parse-time arity tables, featuring Forth stack reflection and F-expressions.",
+        "softwareRequirements": "Python, Go, or Modern Web Browser (WebAssembly/ESM)"
+      },
+      {
+        "@type": "Course",
+        "name": "A Tour of Arli",
+        "description": "An interactive 20-lesson guide to mastering Arli, covering prefix syntax, recursion without parentheses, Forth stack combinators, and F-expressions.",
+        "provider": {
+          "@type": "Organization",
+          "name": "Arli Project"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is Arli?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Arli (Arity-driven Lisp) is a minimalist Lisp dialect that combines prefix S-expressions with Forth data stack operations and Push-style exec stack metaprogramming, eliminating parentheses when operator arities are known."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does Arli eliminate parentheses?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Arli maintains a parse-time ArityTable. When an operator or function has a registered arity N, the parser greedily consumes the next N expressions without requiring outer parentheses. Recursive functions defined with defn or defn-rec register their arity before body parsing to enable parenthesis-free recursion."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do F-expressions work in Arli instead of macros?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Arli uses first-class F-expressions (defn-fexpr) instead of traditional compile-time macros. F-expressions receive unevaluated AST forms directly at runtime and use the eval builtin to selectively evaluate expressions in the caller scope."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How are higher-order functions called in Arli?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Because dynamic parameter symbols have unknown arity at parse time, invoking dynamic function parameters requires explicit parentheses (e.g., (f (g 1 2))). Existing functions can be passed by value as quoted symbols (e.g., 'inc 'add) or anonymous closures."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./tour.css">
+</head>
+<body class="theme-light">
+  <header class="tour-header">
+    <div class="header-left">
+      <button id="btn-toc" class="icon-btn" title="Table of Contents" aria-label="Table of Contents">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+      <div class="brand">
+        <span class="brand-badge">Arli</span>
+        <span class="brand-title">A Tour of Arli</span>
+      </div>
+    </div>
+
+    <div class="header-center">
+      <button id="btn-prev" class="nav-btn" title="Previous Page (Left Arrow)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        <span>Prev</span>
+      </button>
+      <div id="page-indicator" class="page-indicator">1 / 20</div>
+      <button id="btn-next" class="nav-btn" title="Next Page (Right Arrow)">
+        <span>Next</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+    </div>
+
+    <div class="header-right">
+      <a href="https://github.com/xyzzyapps/arli" target="_blank" rel="noopener noreferrer" class="nav-btn" title="GitHub Repository">
+        <span>GitHub</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <line x1="10" y1="14" x2="21" y2="3"></line>
+        </svg>
+      </a>
+    </div>
+  </header>
+
+  <!-- Table of Contents Drawer -->
+  <aside id="toc-drawer" class="toc-drawer">
+    <div class="toc-header">
+      <h3>Modules & Lessons</h3>
+      <button id="btn-close-toc" class="icon-btn" aria-label="Close Table of Contents">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <ul id="toc-list" class="toc-list"></ul>
+  </aside>
+  <div id="toc-backdrop" class="toc-backdrop"></div>
+
+  <!-- Main Tour Split View -->
+  <main class="tour-main">
+    <!-- Left Pane: Slide Content -->
+    <section class="tour-slide-pane" id="slide-pane">
+      <article id="slide-article" class="slide-article">
+        <!-- Injected via JavaScript -->
+      </article>
+      <footer class="slide-footer">
+        <button id="btn-slide-prev" class="footer-btn">&larr; Previous</button>
+        <button id="btn-slide-next" class="footer-btn primary">Next &rarr;</button>
+      </footer>
+    </section>
+
+    <!-- Right Pane: Interactive Playground -->
+    <section class="tour-editor-pane">
+      <div class="editor-toolbar">
+        <div class="toolbar-left">
+          <span class="file-label">main.arli</span>
+        </div>
+        <div class="toolbar-right">
+          <button id="btn-reset" class="tool-btn" title="Reset Code to Lesson Default">Reset</button>
+          <button id="btn-clear" class="tool-btn" title="Clear Console & Stack">Clear</button>
+          <button id="btn-run" class="run-btn" title="Run (Ctrl+Enter)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <span>Run</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="editor-wrapper">
+        <div id="line-numbers" class="line-numbers">1</div>
+        <textarea id="code-editor" class="code-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+      </div>
+
+      <!-- Output Section -->
+      <div class="output-container">
+        <div class="output-tabs">
+          <div class="tab active" data-tab="console">Output Console</div>
+          <div class="tab" data-tab="stack">Data Stack (<span id="stack-count">0</span>)</div>
+        </div>
+
+        <div id="output-view-console" class="output-view active">
+          <pre id="console-output" class="console-output">Click 'Run' or press Ctrl+Enter to execute code.</pre>
+        </div>
+
+        <div id="output-view-stack" class="output-view">
+          <div id="stack-items" class="stack-items">
+            <span class="empty-stack-msg">Stack is empty.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./tour.js"></script>
+</body>
+</html>

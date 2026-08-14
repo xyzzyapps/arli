@@ -102,9 +102,12 @@ func (p *Parser) parseExpr(stream *TokenStream, allowArity bool) ArliValue {
 		stream.Next()
 		name := tok.Value
 
-		// defn-rec always uses special handler (for recursion)
-		if name == "defn-rec" {
+		// defn and defn-rec always use special handler (registers arity before body)
+		if name == "defn" || name == "defn-rec" {
 			return p.parseDefnRec(stream)
+		}
+		if name == "defn-fexpr" {
+			return p.parseDefnFexpr(stream)
 		}
 
 		if !allowArity {
@@ -161,7 +164,7 @@ func (p *Parser) parseParenList(stream *TokenStream) ArliValue {
 	// parseDefnRec and (via arity-driven) top-level defn
 	if len(items) == 1 {
 		if list, ok := items[0].(ArliList); ok && len(list) > 0 {
-			if sym, ok := list[0].(ArliSymbol); ok && string(sym) == "defn" {
+			if sym, ok := list[0].(ArliSymbol); ok && (string(sym) == "defn" || string(sym) == "defn-fexpr") {
 				return list
 			}
 		}
@@ -221,44 +224,7 @@ func (p *Parser) parseMapLiteral(stream *TokenStream) ArliValue {
 // parseDefn parses (defn name (params) body...)
 // Used when defn is inside parens as the first element (not arity-driven)
 func (p *Parser) parseDefn(stream *TokenStream) ArliValue {
-	nameTok := stream.Peek()
-	if nameTok.Type != TK_SYMBOL {
-		panic("defn expects a name")
-	}
-	name := ArliSymbol(stream.Next().Value)
-
-	params := p.parseExpr(stream, false) // parse (x y z) with no arity on first
-	paramList, ok := params.(ArliList)
-	if !ok {
-		panic("defn expects a parameter list")
-	}
-	paramSyms := symbolsFromList(paramList)
-
-	// Register arity at parse time
-	p.arities.Register(string(name), len(paramSyms))
-
-	// Parse body (multiple expressions until close paren)
-	var body []ArliValue
-	for {
-		tok := stream.Peek()
-		if tok.Type == TK_CLOSE || tok.Type == TK_EOF {
-			break
-		}
-		expr := p.parseExpr(stream, true)
-		if expr != nil {
-			body = append(body, expr)
-		}
-	}
-	if len(body) == 0 {
-		body = append(body, Nil)
-	}
-
-	result := make(ArliList, 3+len(body))
-	result[0] = ArliSymbol("defn")
-	result[1] = name
-	result[2] = paramSyms
-	copy(result[3:], body)
-	return result
+	return p.parseDefnRec(stream)
 }
 
 // parseFn parses (fn (params) body...)
@@ -325,6 +291,42 @@ func (p *Parser) parseDefnRec(stream *TokenStream) ArliValue {
 
 	result := make(ArliList, 3+len(body))
 	result[0] = ArliSymbol("defn")
+	result[1] = name
+	result[2] = paramSyms
+	copy(result[3:], body)
+	return result
+}
+
+func (p *Parser) parseDefnFexpr(stream *TokenStream) ArliValue {
+	nameTok := stream.Peek()
+	if nameTok.Type != TK_SYMBOL {
+		panic("defn-fexpr expects a name")
+	}
+	name := ArliSymbol(stream.Next().Value)
+
+	params := p.parseExpr(stream, false)
+	paramList, ok := params.(ArliList)
+	if !ok {
+		panic("defn-fexpr expects a parameter list")
+	}
+	paramSyms := symbolsFromList(paramList)
+
+	p.arities.Register(string(name), len(paramSyms))
+
+	var body []ArliValue
+	tok := stream.Peek()
+	if tok.Type != TK_CLOSE && tok.Type != TK_EOF {
+		expr := p.parseExpr(stream, true)
+		if expr != nil {
+			body = append(body, expr)
+		}
+	}
+	if len(body) == 0 {
+		body = append(body, Nil)
+	}
+
+	result := make(ArliList, 3+len(body))
+	result[0] = ArliSymbol("defn-fexpr")
 	result[1] = name
 	result[2] = paramSyms
 	copy(result[3:], body)

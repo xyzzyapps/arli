@@ -8,7 +8,7 @@
  * arguments and evaluator is the Evaluator instance (for stack access).
  */
 
-import { ArliSymbol, nil, Builtin, Function, isTruthy, arliRepr } from './types.js';
+import { ArliSymbol, nil, Builtin, Function, isTruthy, arliRepr, arliEqual } from './types.js';
 
 export function getBuiltins() {
   const b = {};
@@ -25,12 +25,12 @@ export function getBuiltins() {
   reg('neg', (args, ev) => -args[0], 1);
 
   // Comparison
-  reg('=', (args, ev) => args[0] === args[1], 2);
+  reg('=', (args, ev) => arliEqual(args[0], args[1]), 2);
   reg('<', (args, ev) => args[0] < args[1], 2);
   reg('>', (args, ev) => args[0] > args[1], 2);
   reg('<=', (args, ev) => args[0] <= args[1], 2);
   reg('>=', (args, ev) => args[0] >= args[1], 2);
-  reg('!=', (args, ev) => args[0] !== args[1], 2);
+  reg('!=', (args, ev) => !arliEqual(args[0], args[1]), 2);
 
   // Logic
   reg('and', (args, ev) => {

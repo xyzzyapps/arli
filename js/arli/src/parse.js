@@ -54,7 +54,8 @@ export class Parser {
     if (tt === TOKEN_KEYWORD) return new ArliSymbol(tok.value);
     if (tt === TOKEN_SYMBOL) {
       const name = tok.value;
-      if (name === 'defn-rec') return this._parseDefnRec(stream);
+      if (name === 'defn' || name === 'defn-rec') return this._parseDefnRec(stream);
+      if (name === 'defn-fexpr') return this._parseDefnFexpr(stream);
       if (!allowArity) return new ArliSymbol(name);
       const arity = this.arityTable.get(name);
       if (arity !== null && arity >= 0) {
@@ -84,7 +85,7 @@ export class Parser {
       const expr = this._parseExpr(stream, allowArity);
       if (expr !== null && expr !== undefined) {
         if (isFirst && expr instanceof ArliSymbol && expr.name === 'quote') quotedForm = true;
-        if (isFirst && Array.isArray(expr) && expr.length > 0 && expr[0] instanceof ArliSymbol && expr[0].name === 'defn' && stream.peek() !== null && stream.peek().type === TOKEN_CLOSE) { stream.next(); return expr; }
+        if (isFirst && Array.isArray(expr) && expr.length > 0 && expr[0] instanceof ArliSymbol && (expr[0].name === 'defn' || expr[0].name === 'defn-fexpr') && stream.peek() !== null && stream.peek().type === TOKEN_CLOSE) { stream.next(); return expr; }
         items.push(expr);
       }
       isFirst = false;
@@ -136,17 +137,7 @@ export class Parser {
   }
 
   _parseDefn(stream) {
-    const nameSym = this._parseNameSym(stream);
-    const paramSyms = this._parseParamsList(stream);
-    this.arityTable.register(nameSym.name, paramSyms.length);
-    const body = [];
-    while (true) {
-      const tok = stream.peek();
-      if (tok === null || tok.type === TOKEN_CLOSE || tok.type === TOKEN_VECTOR_CLOSE || tok.type === TOKEN_MAP_CLOSE) break;
-      const expr = this._parseExpr(stream, true);
-      if (expr !== null && expr !== undefined) body.push(expr);
-    }
-    return [new ArliSymbol('defn'), nameSym, paramSyms].concat(body.length > 0 ? body : [nil]);
+    return this._parseDefnRec(stream);
   }
 
   _parseFn(stream) {
@@ -172,6 +163,19 @@ export class Parser {
       if (expr !== null && expr !== undefined) body.push(expr);
     }
     return [new ArliSymbol('defn'), nameSym, paramSyms].concat(body.length > 0 ? body : [nil]);
+  }
+
+  _parseDefnFexpr(stream) {
+    const nameSym = this._parseNameSym(stream);
+    const paramSyms = this._parseParamsList(stream);
+    this.arityTable.register(nameSym.name, paramSyms.length);
+    const body = [];
+    const tok = stream.peek();
+    if (tok !== null && tok.type !== TOKEN_CLOSE && tok.type !== TOKEN_VECTOR_CLOSE && tok.type !== TOKEN_MAP_CLOSE) {
+      const expr = this._parseExpr(stream, true);
+      if (expr !== null && expr !== undefined) body.push(expr);
+    }
+    return [new ArliSymbol('defn-fexpr'), nameSym, paramSyms].concat(body.length > 0 ? body : [nil]);
   }
 }
 

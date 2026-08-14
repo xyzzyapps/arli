@@ -129,17 +129,16 @@ class REPL:
         """Parse and evaluate a single line of arli code."""
         self.history.append(line)
 
-        # Try to parse and evaluate
-        try:
-            exprs = self.evaluator.parser.parse(line)
-            for expr in exprs:
-                result = self.evaluator._eval_expr(expr)
+        from .tokenize import tokenize
+        from .parse import TokenStream
+        tokens = tokenize(line)
+        stream = TokenStream(tokens)
+        while not stream.is_eof:
+            expr = self.evaluator.parser._parse_expr(stream, allow_arity=True)
+            if expr is not None:
+                result = self.evaluator.eval(expr)
                 if result is not None:
-                    self.evaluator.stack.append(result)
                     print(arli_repr(result))
-        except SyntaxError as e:
-            # Maybe it's a partial expression — try wrapping in parens
-            raise e
 
     def _handle_command(self, cmd: str) -> None:
         """Handle meta-commands."""

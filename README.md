@@ -13,20 +13,37 @@
 defn add (x y) + x y
 add 1 2           ;; => 3  (add has arity 2)
 
-;; Recursive fibonacci (defn-rec requires parens)
-(defn-rec fib (n)
+;; Recursive fibonacci — no parens needed (defn & defn-rec register arity before body)
+defn-rec fib (n)
     if (= n 0)
         0
         if (= n 1)
             1
-            + fib (- n 1) fib (- n 2))
+            + fib (- n 1) fib (- n 2)
 
 print fib 10      ;; prints 55
 ```
 
+## Interactive Tour
+
+An interactive web-based language tour is included in the `tour/` directory, inspired by *A Tour of Go*.
+
+```bash
+# Serve the interactive tour locally:
+python -m http.server 8080 -d tour
+# Open http://localhost:8080 in your browser
+```
+
+Features:
+- 20 comprehensive interactive lessons.
+- Split-pane layout with syntax-highlighted code editor.
+- In-browser execution via WebAssembly / JavaScript runtime.
+- Live Data Stack visualizer and execution output console.
+
 ## Key Features
 
 - **Arity-driven syntax**: Functions with known arity don't need parentheses
+- **Parenthesis-free recursion**: `defn` and `defn-rec` register arity before body parsing for paren-free recursion
 - **Stack-based evaluation**: Forth-like data stack with `dup`, `swap`, `drop`, `over`, `rot`, `pick`, `roll`
 - **Stack reflection**: Capture and replace the data stack with `stack`/`stack!` for metaprogramming
 - **Exec stack (Push-style)**: Self-modifying code via `exec-stack`, `exec!`, `exec-push`, `(exec)` — the exec stack IS the call stack
@@ -43,6 +60,7 @@ print fib 10      ;; prints 55
 - **Module system**: `(import-module "path.arli")` for loading files
 - **Python interop**: Use any Python library via `import`, `import!`, `.`, or `host`
 - **Go backend**: Compiled Go binary with Go standard library access
+- **JavaScript backend & browser tour**: Full client-side browser runtime and REPL
 - **Unicode symbols**: Greek, Cyrillic, Chinese, math symbols as function names
 - **REPL**: Interactive with stack inspection, debug mode, multi-line input
 - **F-expressions**: User-defined functions that don't evaluate arguments eagerly; custom control flow via `defn-fexpr` and `eval`
@@ -119,6 +137,7 @@ quote + 1 2        ;; quote (quote=1)
 cond clauses       ;; multi-branch (cond=1)
 fn (x) * x 2       ;; anonymous function (fn=2)
 defn add (x y) + x y  ;; function definition (defn=3)
+defn-rec fact (n) if (= n 0) 1 * n fact (- n 1) ;; recursive function (defn-rec=3)
 ```
 
 ### Parentheses required (unknown/variadic arity)
@@ -129,7 +148,29 @@ defn add (x y) + x y  ;; function definition (defn=3)
 (and a b c)                       ;; short-circuit AND
 (or a b c)                        ;; short-circuit OR
 (hash-map :a 1 :b 2)              ;; map creation
+(f (g 1 2))                       ;; higher-order parameter calls with dynamic arity
 ```
+
+### Higher-Order Functions & Dynamic Arity
+
+Parenthesis elimination in Arli is **static (parse-time)**, based on registered words in the `ArityTable`.
+
+1. When calling known static functions directly, arities are fixed:
+   ```clojure
+   inc add 1 2   ;; statically parses as (inc (add 1 2)) => 4
+   add inc 1 2   ;; statically parses as (add (inc 1) 2) => 4
+   ```
+
+2. When functions are passed as parameters (`f`, `g`), their arity is **dynamic and unknown at parse time**. Dynamic higher-order calls **require explicit parentheses**:
+   ```clojure
+   ;; Composing f(g(1, 2)):
+   defn apply2 (f g) (f (g 1 2))
+   apply2 inc add  ;; => 4
+
+   ;; Composing f(g(1), 2):
+   defn apply2 (f g) (f (g 1) 2)
+   apply2 add inc  ;; => 4
+   ```
 
 ### Stack Operations
 ```clojure
@@ -212,7 +253,7 @@ Every operator has a documented arity. Arity >= 0 = no parens needed. Arity -1 =
 |------|-------|---------|
 | `define` | 2 | `define x 42` |
 | `defn` | 3 | `defn add (x y) + x y` |
-| `defn-rec` | 3 | `defn-rec fact (n) (if ...)` |
+| `defn-rec` | 3 | `defn-rec fact (n) if (= n 0) 1 * n fact (- n 1)` |
 | `fn` | 2 | `fn (x) * x 2` |
 | `if` | 3 | `if cond "yes" "no"` |
 | `while` | 2 | `while (< i 5) (do ...)` |

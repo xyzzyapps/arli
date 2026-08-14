@@ -524,6 +524,8 @@ class Evaluator:
 
             # Generic function call
             fn_val = self._eval_expr(head)
+            while isinstance(fn_val, Symbol):
+                fn_val = self.env.lookup(fn_val.name)
 
             # For fexprs, pass raw (unevaluated) argument forms
             if isinstance(fn_val, Function) and fn_val.is_fexpr:
@@ -547,6 +549,8 @@ class Evaluator:
 
     def apply(self, fn: Any, args: list) -> Any:
         """Apply a function (builtin, user-defined, or callable) to args."""
+        while isinstance(fn, Symbol):
+            fn = self.env.lookup(fn.name)
         if isinstance(fn, Builtin):
             return fn(*args, evaluator=self)
         if isinstance(fn, Function):

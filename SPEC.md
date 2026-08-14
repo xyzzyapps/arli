@@ -100,15 +100,25 @@ Context                     | allow_arity | Behavior
 ----------------------------|-------------|---------------------------------------
 Top level                   | True        | arity-driven + special handlers
 First element inside parens | False       | symbol only, no arity, no special handlers
-Subsequent inside parens    | True        | arity-driven (but no defn/fn special)
-defn-rec (always)           | N/A         | special handler regardless of position
+Subsequent inside parens    | True        | arity-driven (auto-unwraps defn/defn-rec/defn-fexpr)
+defn / defn-rec (always)    | N/A         | special handler: registers arity BEFORE parsing body
 ```
 
 ### Special Form Parsers
 
-- **`defn`**: `defn name (params) body...` — at top level, uses arity 3. Inside parens, the `defn` symbol is followed by params and body.
-- **`defn-rec`**: `(defn-rec name (params) body...)` — special handler that registers arity BEFORE parsing body (for recursion). Must use parens.
-- **`fn`**: `fn (params) body...` — at top level, uses arity 2. Creates anonymous function.
+- **`defn`**: `defn name (params) body` — at top level (or inside parens), registers function arity BEFORE parsing body, enabling parenthesis-free recursive calls.
+- **`defn-rec`**: `defn-rec name (params) body` — alias / explicit recursive form, registers arity BEFORE parsing body (zero outer parentheses required).
+- **`defn-fexpr`**: `defn-fexpr name (params) body` — defines an f-expression with arity registration before parsing body.
+- **`fn`**: `fn (params) body` — creates an anonymous function (arity 2).
+
+### Higher-Order Function Dynamic Arity
+
+Parenthesis elimination in Arli is **static (parse-time)**, based on registered words in the `ArityTable`.
+- When invoking named static functions directly, their arity is known (e.g., `inc add 1 2` parses as `(inc (add 1 2))`).
+- When functions are passed as parameters (e.g. `f`, `g` in `defn apply2 (f g) ...`), their arity is **dynamic and unknown at parse time**.
+- Therefore, higher-order parameter invocations **require explicit parentheses**:
+  - `defn apply2 (f g) (f (g 1 2))`
+  - `defn apply2 (f g) (f (g 1) 2)`
 
 ### Parsing Examples
 
@@ -120,7 +130,9 @@ Expression                     | Parsed AST
 print + 1 2                    | [print, [+, 1, 2]]
 if cond "yes" "no"             | [if, cond, "yes", "no"]
 (if cond a b)                  | [if, cond, a, b]
+defn add (x y) + x y           | [defn, add, [x, y], [+, x, y]]
 (defn add (x y) (+ x y))       | [defn, add, [x, y], [+, x, y]]
+defn-rec fact (n) if (= n 0) 1 * n fact (- n 1) | [defn, fact, [n], [if, [=, n, 0], 1, [*, n, [fact, [-, n, 1]]]]]
 define double (fn (x) (* x 2)) | [define, double, [fn, [x], [*, x, 2]]]
 ```
 
@@ -135,15 +147,15 @@ define double (fn (x) (* x 2)) | [define, double, [fn, [x], [*, x, 2]]]
 
 ## Complete Arity Table
 
-Every operator and special form in arli has a documented arity. **All operators with arity >= 0 can be used WITHOUT parentheses.** Only variadic operators (arity -1) require parentheses.
+Every operator and special form in arli has a documented arity. **All operators with arity >= 0 can be used WITHOUT parentheses.** Only variadic operators (arity -1) and dynamic parameter invocations require parentheses.
 
 ### Special Forms (arity >= 0)
 
 | Form | Arity | Syntax | Description |
 |------|-------|--------|-------------|
 | `define` | 2 | `define name value` | Bind name to evaluated value; auto-registers arity if value is a function |
-| `defn` | 3 | `defn name (params) body` | Define function with auto arity registration |
-| `defn-rec` | -1 | `(defn-rec name (params) body)` | Define recursive function (requires parens; registers arity before body) |
+| `defn` | 3 | `defn name (params) body` | Define function with parse-time arity registration (paren-free recursion supported) |
+| `defn-rec` | 3 | `defn-rec name (params) body` | Explicit recursive function definition (paren-free) |
 | `fn` | 2 | `fn (params) body` | Create anonymous function |
 | `if` | 3 | `if cond then else` | Conditional with short-circuit evaluation |
 | `while` | 2 | `while cond body` | Loop while condition is truthy |
@@ -159,7 +171,8 @@ Every operator and special form in arli has a documented arity. **All operators 
 | `.` | 2 | `. obj attr` | Attribute access / method call (arity 2 for top-level attribute access; chains inside parens) |
 | `host` | 1 | `host "code"` | Evaluate arbitrary host language expression string |
 | `assert` | 2 | `assert expr message` | Raise AssertionError if expr is falsy |
-| `doc` | -1 | `(doc sym)` / `(doc sym "text")` | Retrieve or store documentation (variadic — requires parens) |
+| `doc` | 1 | `doc sym` | Retrieve documentation |
+| `doc!` | 2 | `doc! sym "text"` | Store documentation |
 | `match` | -1 | `(match val clause...)` | Pattern matching (variadic — requires parens) |
 | `import-module` | 1 | `import-module "path"` | Load and execute an `.arli` file |
 | `defn-fexpr` | 3 | `defn-fexpr name (params) body` | Define f-expression (creates function that doesn't evaluate its arguments) |

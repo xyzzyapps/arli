@@ -8,6 +8,16 @@ import { ArityTable, Parser } from './parse.js';
 import { tokenize, TokenStream } from './tokenize.js';
 import { getBuiltins } from './builtins.js';
 
+let nodeFs = null;
+let nodeRequire = null;
+if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+  try {
+    const { createRequire } = await import('node:module');
+    nodeRequire = createRequire(import.meta.url);
+    nodeFs = nodeRequire('node:fs');
+  } catch (e) {}
+}
+
 export class Evaluator {
   constructor(debug = false) {
     this.stack = [];
@@ -222,8 +232,8 @@ export class Evaluator {
           let name = moduleName;
           if (head.name === 'import!' && expr.length >= 3 && expr[2] instanceof ArliSymbol) name = expr[2].name;
           let mod;
-          if (typeof require !== 'undefined') {
-            mod = require(moduleName);
+          if (nodeRequire) {
+            mod = nodeRequire(moduleName);
             this.env.define(name, mod);
             return mod;
           } else {
@@ -346,7 +356,10 @@ export class Evaluator {
       }
 
       // Generic function call
-      const fnVal = this._evalExpr(head);
+      let fnVal = this._evalExpr(head);
+      while (fnVal instanceof ArliSymbol) {
+        fnVal = this.env.lookup(fnVal.name);
+      }
       if (fnVal instanceof Function && fnVal.isFexpr) return this._applyFunction(fnVal, expr.slice(1));
       const args = expr.slice(1).map(arg => this._evalExpr(arg));
       if (fnVal instanceof Builtin) return fnVal.call(args, this);
@@ -358,6 +371,9 @@ export class Evaluator {
   }
 
   apply(fn, args) {
+    while (fn instanceof ArliSymbol) {
+      fn = this.env.lookup(fn.name);
+    }
     if (fn instanceof Builtin) return fn.call(args, this);
     if (fn instanceof Function) return this._applyFunction(fn, args);
     if (typeof fn === 'function') return fn(...args);
@@ -405,15 +421,17 @@ export class Evaluator {
 
   execFile(path) {
     // Node: sync readFile. Browser: fetch + fire exec async, return nil (result not available yet).
-    if (typeof require !== 'undefined') {
-      const fs = require('fs');
-      return this.exec(fs.readFileSync(path, 'utf-8'));
+    if (nodeFs) {
+      return this.exec(nodeFs.readFileSync(path, 'utf-8'));
     }
     // Browser: async fetch, execute when available
-    fetch(path)
-      .then(r => { if (!r.ok) throw new Error(`fetch ${path}: ${r.status}`); return r.text(); })
-      .then(source => this.exec(source))
-      .catch(e => { console.error(`import-module error: ${e.message}`); });
+    if (typeof fetch !== 'undefined') {
+      fetch(path)
+        .then(r => { if (!r.ok) throw new Error(`fetch ${path}: ${r.status}`); return r.text(); })
+        .then(source => this.exec(source))
+        .catch(e => { console.error(`import-module error: ${e.message}`); });
+      return nil;
+    }
     return nil;
   }
 }

@@ -61,18 +61,18 @@ def test_python_dot_chain():
 
 
 def test_python_eval():
-    """Python-specific: python special form."""
+    """Python-specific: host special form."""
     ev = Evaluator()
-    r = ev.exec('python "repr(42)"')
+    r = ev.exec('host "repr(42)"')
     assert r == "42"
     print("  OK test_python_eval")
 
 
 def test_python_eval_env():
-    """Python-specific: python eval accesses env bindings."""
+    """Python-specific: host eval accesses env bindings."""
     ev = Evaluator()
     ev.exec("define x 42")
-    r = ev.exec('python "x * 2"')
+    r = ev.exec('host "x * 2"')
     assert r == 84
     print("  OK test_python_eval_env")
 

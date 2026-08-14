@@ -1,24 +1,25 @@
 ;; Hya common test: recursive functions
 ;;
-;; test: recursive factorial
-(defn-rec fact (n)
-;; expect: <fn fact>
-    (if (= n 0)
-;; expect: 120
+;; test: recursive factorial without parens
+defn-rec fact (n)
+    if (= n 0)
         1
-;; expect: <fn fib>
-        (* n fact (- n 1))))
-;; expect: 55
+        * n fact (- n 1)
+;; expect: <fn fact>
 fact 5
+;; expect: 120
 
-;; test: recursive fibonacci
-(defn-rec fib (n)
-    (if (= n 0)
+;; test: recursive fibonacci without parens via defn
+defn fib (n)
+    if (= n 0)
         0
-        (if (= n 1)
+        if (= n 1)
             1
-            + fib (- n 1) fib (- n 2))))
+            + fib (- n 1) fib (- n 2)
+;; expect: <fn fib>
 fib 10
+;; expect: 55
+
 
 
 

@@ -2,6 +2,7 @@
  * Interactive REPL for arli (JavaScript port).
  */
 
+import readline from 'readline';
 import { Evaluator } from './eval.js';
 import { arliRepr, nil } from './types.js';
 
@@ -12,7 +13,6 @@ export class REPL {
   }
 
   run() {
-    const readline = require('readline');
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: 'arli> ' });
 
     console.log('arli v1.0.0 (JavaScript port)');

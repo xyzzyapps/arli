@@ -27,7 +27,8 @@ func NewEvaluator() *Evaluator {
 		ExecStack: make([]ArliValue, 0),
 		EnvStack:  make([]*Environment, 0),
 		Arities:   NewArityTable(),
-	}	ev.GlobalEnv = NewEnvironment(nil, "global")
+	}
+	ev.GlobalEnv = NewEnvironment(nil, "global")
 	ev.Env = ev.GlobalEnv
 	ev.parser = NewParser(ev.Arities)
 	ev.loadBuiltins()
@@ -53,7 +54,8 @@ func (ev *Evaluator) loadBuiltins() {
 	ev.Arities.Register("cond", 1)     // cond clauses-list
 	ev.Arities.Register("defn", 3)     // defn name (params) body
 	ev.Arities.Register("defn-rec", 3) // defn-rec name (params) body
-	ev.Arities.Register("fn", 2)       // fn (params) body	ev.Arities.Register("import", 1)   // import module-name
+	ev.Arities.Register("fn", 2)       // fn (params) body
+	ev.Arities.Register("import", 1)   // import module-name
 	ev.Arities.Register("import!", 2)  // import! module alias
 	ev.Arities.Register(".", 2)        // . obj attr
 	ev.Arities.Register("host", 1)     // host "code"
@@ -647,11 +649,19 @@ func (ev *Evaluator) evalExpr(expr ArliValue) (ArliValue, error) {
 		if err != nil {
 			return nil, err
 		}
+		for {
+			if sym, ok := fn.(ArliSymbol); ok {
+				v, found := ev.Env.Lookup(string(sym))
+				if !found {
+					break
+				}
+				fn = v
+			} else {
+				break
+			}
+		}
 
 		// For fexprs, pass raw (unevaluated) argument forms
-		if hf, ok := fn.(*ArliFn); ok && !hf.IsFexpr {
-			
-		}
 		if hf, ok := fn.(*ArliFn); ok && hf.IsFexpr {
 			args := make([]ArliValue, len(v)-1)
 			copy(args, v[1:])
@@ -736,6 +746,17 @@ func arliEqual(a, b ArliValue) bool {
 // ---------------------------------------------------------------------------
 
 func (ev *Evaluator) apply(fn ArliValue, args []ArliValue) (ArliValue, error) {
+	for {
+		if sym, ok := fn.(ArliSymbol); ok {
+			v, found := ev.Env.Lookup(string(sym))
+			if !found {
+				break
+			}
+			fn = v
+		} else {
+			break
+		}
+	}
 	switch f := fn.(type) {
 	case *ArliBuiltin:
 		return f.Call(args, ev)

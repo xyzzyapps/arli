@@ -75,8 +75,7 @@ func getBuiltins() map[string]*ArliBuiltin {
 
 	// Comparison
 	add("=", func(args []ArliValue, ev *Evaluator) (ArliValue, error) {
-		a, b := toFloat(args[0]), toFloat(args[1])
-		return boolResult(a == b), nil
+		return boolResult(checkEqual(args[0], args[1])), nil
 	}, 2)
 	add("<", func(args []ArliValue, ev *Evaluator) (ArliValue, error) {
 		a, b := toFloat(args[0]), toFloat(args[1])
@@ -95,8 +94,7 @@ func getBuiltins() map[string]*ArliBuiltin {
 		return boolResult(a >= b), nil
 	}, 2)
 	add("!=", func(args []ArliValue, ev *Evaluator) (ArliValue, error) {
-		a, b := toFloat(args[0]), toFloat(args[1])
-		return boolResult(a != b), nil
+		return boolResult(!checkEqual(args[0], args[1])), nil
 	}, 2)
 
 	// Logic
@@ -674,4 +672,19 @@ func boolResult(b bool) ArliValue {
 		return True
 	}
 	return False
+}
+
+func isNumeric(v ArliValue) bool {
+	switch v.(type) {
+	case ArliInt, ArliFloat:
+		return true
+	}
+	return false
+}
+
+func checkEqual(a, b ArliValue) bool {
+	if isNumeric(a) && isNumeric(b) {
+		return toFloat(a) == toFloat(b)
+	}
+	return arliEqual(a, b)
 }

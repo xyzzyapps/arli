@@ -655,9 +655,10 @@ class TourApp {
     const lines = this.codeEditor.value.split('\n').length;
     let numbers = '';
     for (let i = 1; i <= lines; i++) {
-      numbers += i + '\n';
+      numbers += (i > 1 ? '\n' : '') + i;
     }
-    this.lineNumbers.textContent = numbers.trim();
+    this.lineNumbers.textContent = numbers;
+    this.lineNumbers.scrollTop = this.codeEditor.scrollTop;
   }
 
   loadLesson(index) {

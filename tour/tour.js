@@ -6,7 +6,7 @@
 import { Evaluator, arliRepr } from '../js/arli/src/arli-browser.js';
 
 // ---------------------------------------------------------------------------
-// Tour Curriculum Database (20 Modules)
+// Tour Curriculum Database (21 Modules)
 // ---------------------------------------------------------------------------
 
 const LESSONS = [
@@ -522,6 +522,64 @@ print host "document.title"
 
 ;; Access DOM via dot syntax:
 print . document title
+`
+  },
+  {
+    id: 'vsa',
+    title: '21. VSA (Vector Symbolic Architecture)',
+    article: `
+      <h2>Vector Symbolic Architecture</h2>
+      <p>Arli ships a dependency-free <strong>FHRR</strong> hyperdimensional vector
+      engine, ported from <em>VSA-Lisp</em>. A vector is 4096 unit-magnitude complex
+      phasors: <em>binding</em> multiplies them, <em>bundling</em> adds them and
+      re-normalizes every component back to unit magnitude, and <em>similarity</em>
+      measures how close two vectors are. Symbols,
+      strings, numbers and lists all have deterministic encodings, so structure can
+      live <strong>inside</strong> a single vector.</p>
+      <ul>
+        <li><code>vsa-encode v</code> — encode a value</li>
+        <li><code>vsa-bind a b</code> / <code>vsa-unbind a b</code> — binding and its exact inverse</li>
+        <li><code>vsa-similarity a b</code> — cosine similarity in [-1, 1]</li>
+        <li><code>(vsa-bundle a b …)</code> — superposition (variadic, so parens)</li>
+        <li><code>vsa-cons a b</code>, <code>vsa-car</code>, <code>vsa-cdr</code> — a pair <em>is</em> one vector</li>
+        <li><code>vsa-register v</code> / <code>vsa-cleanup vec</code> — associative cleanup memory</li>
+        <li><code>vsa-match '(?x ?y) value</code> — bind <code>?vars</code> by unbinding (patterns are quoted data)</li>
+      </ul>
+      <p>This is arli's arity-driven syntax doing the same work as VSA-Lisp, minus
+      the parentheses:</p>
+      <pre><code>define bound vsa-bind 'alpha 'beta
+print vsa-car vsa-encode vsa-cons 'alpha 'beta</code></pre>
+      <div class="info-box">
+        <p><strong>Try it!</strong> Watch how <code>vsa-car</code> reads a pair whose
+        halves are no longer pointers — the value comes back from the cleanup memory
+        by nearest-neighbour search.</p>
+      </div>
+    `,
+    code: `;; Random vectors are near-orthogonal
+vsa-seed 42
+define a vsa-random
+define b vsa-random
+print < vsa-similarity a b 0.1
+
+;; Binding, and its exact inverse
+define bound vsa-bind 'alpha 'beta
+print > vsa-similarity vsa-unbind bound 'alpha vsa-encode 'beta 0.999
+
+;; A pair is a single vector; car/cdr read its cache
+define p vsa-cons 'alpha 'beta
+print p
+print vsa-car p
+print vsa-cdr p
+
+;; ... and a plain vector is read back through the cleanup memory
+vsa-register 'alpha
+vsa-register 'beta
+define v vsa-encode (vsa-cons 'alpha 'beta)
+print vsa-car v
+print vsa-cdr v
+
+;; Pattern variables bind through unbinding (patterns are quoted data)
+print vsa-match '(?x ?y) (vsa-list 'alpha 'beta)
 `
   }
 ];

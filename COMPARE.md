@@ -22,6 +22,7 @@ This means "missing" features fall into three categories:
 |---------|---------|--------|-------|-----|---------|
 | **Arity-driven syntax** | No | No | No | **Yes** | Unique strength |
 | **Stack evaluation** | No | No | No | **Yes** | Unique strength |
+| **VSA hyperdimensional vectors** | No | No | No | **Yes** (FHRR, 27 words) | Unique strength |
 | **Python interop** | No | **Full** | No | **Full** | Matches HyLang |
 | **Core data structures** | Vec, Map, Set, List, Seq | List, Dict, Set, Vector | Array, Tuple, Struct, Table, Buffer | **List, nil** | Intentionally minimal; Python provides the rest |
 
@@ -182,7 +183,9 @@ Nothing else has this combination:
 | **Arity-driven syntax** | Eliminates parentheses for ALL known-arity functions |
 | **Stack evaluation** | Forth-like explicit data stack |
 | **F-expressions** | User-defined functions with lazy evaluation of arguments |
-These two features together create a language that reads differently from
+| **VSA vectors** | Hyperdimensional computing built in: bind/bundle/unbind, pairs that are one vector, cleanup memory, resonator factorization |
+
+These features together create a language that reads differently from
 anything else. Code is flat, not nested. Data flows through the stack rather
 than through nested expressions. The arity table replaces the paren-matching
 that other Lisps force you to do mentally.

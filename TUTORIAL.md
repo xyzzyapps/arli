@@ -1612,7 +1612,198 @@ print "fib 10:" fib 10
 ```
 
 
-### Chapter 12: Where To Go From Here
+### Chapter 12: Vector Symbolic Architecture
+
+**What you'll build:** A hyperdimensional vector engine in your language — one where a pair is a single vector, `car` and `cdr` come back from an associative memory, and you can factor a bundle back into the symbols that built it.
+
+Everything so far stores structure in addresses: a list is a chain of nodes, a map is a table. arli also ships a second way to store structure, borrowed from *VSA-Lisp* ("Velo"): **Vector Symbolic Architecture**, where structure lives inside high-dimensional vectors.
+
+A VSA vector in arli is 4096 unit-magnitude complex numbers (an FHRR representation). Three operations do all the work:
+
+- **Bind** (`vsa-bind a b`) — multiply element-wise. The result is dissimilar to both inputs, which makes it a good *association*.
+- **Bundle** (`vsa-bundle a b …`) — add, then normalize each component back to unit magnitude. The result stays similar to all of its parts, which makes it a good *superposition*.
+- **Unbind** (`vsa-unbind a b`) — multiply by the conjugate. This is the exact inverse of bind when the second operand is a single vector.
+
+No dependencies are involved: the random generator, the vector math and the cleanup memory are implemented in arli itself, identically in the Python, JavaScript and Go backends.
+
+#### 12.1 Encoding values
+
+Every value has a deterministic encoding, so the same program produces the same similarities on every run:
+
+```
+arli> vsa-dim
+4096
+
+arli> vsa-encode 'alpha
+<vsa-vec>
+
+arli> define a vsa-encode 'alpha
+<vsa-vec>
+
+arli> < vsa-similarity a vsa-encode 'alpha 0.999
+true
+
+arli> < vsa-similarity a vsa-encode 'beta 0.1
+true
+```
+
+Symbols and strings are encoded from a hash of their name, numbers use *fractional power encoding* (close numbers stay similar), `nil`/`true`/`false` are fixed vectors, and lists are nil-terminated chains of VSA pairs.
+
+```
+arli> > vsa-similarity 100 101 0.9
+true
+
+arli> < vsa-similarity 0 500000 0.5
+true
+```
+
+Maps, builtins and functions have no vector — `vsa-encode` raises `vsa: cannot encode map` rather than inventing one.
+
+#### 12.2 Binding, unbinding, bundling
+
+```
+arli> define bound vsa-bind 'alpha 'beta
+<vsa-vec>
+
+arli> < vsa-similarity bound vsa-encode 'alpha 0.1
+true
+
+arli> > vsa-similarity vsa-unbind bound 'alpha vsa-encode 'beta 0.999
+true
+
+arli> > vsa-similarity (vsa-bundle 'alpha 'beta 'gamma) vsa-encode 'alpha 0.5
+true
+```
+
+Binding hides its inputs; unbinding brings one back when you know the other; bundling keeps everything partially visible at once. Those three properties are enough to build records, sequences and pattern matchers.
+
+#### 12.3 Pairs that are a single vector
+
+`vsa-cons` builds a VSA pair. Unlike `cons`, the pair is *also* a vector: `bind(CAR, encode(car))` bundled with `bind(CDR, encode(cdr))`.
+
+```
+arli> define p vsa-cons 'alpha 'beta
+(alpha . beta)
+
+arli> vsa-car p
+alpha
+
+arli> vsa-cdr p
+beta
+```
+
+`vsa-car`/`vsa-cdr` return the cached halves for a pair, so they are exact. `vsa-list` chains pairs into a proper list, and `vsa->list` converts a chain back into an ordinary arli list you can `map`/`filter`/`reduce` over:
+
+```
+arli> define xs (vsa-list 1 2 3)
+(1 2 3)
+
+arli> vsa->list vsa-cdr xs
+(2 3)
+```
+
+Note that core `cons`, `car` and `cdr` are untouched — arli's list semantics did not change. VSA pairs are a separate type, reachable only through `vsa-*` words.
+
+#### 12.4 Cleanup memory: reading structure out of a vector
+
+A raw vector has no fields to read. To get values back out you unbind, then ask an **associative memory** which known value the noisy result is closest to. `vsa-register` stores `value → vector`; `vsa-cleanup` returns the nearest registered value above a similarity threshold of 0.3.
+
+```
+arli> vsa-register 'alpha
+alpha
+
+arli> vsa-register 'beta
+beta
+
+arli> define v vsa-encode (vsa-cons 'alpha 'beta)
+<vsa-vec>
+
+arli> vsa-car v
+alpha
+
+arli> vsa-cdr v
+beta
+```
+
+`vsa-cleanup` on something never registered returns `nil`, and `vsa-query vec k` lists the k nearest entries with their similarities when you want to inspect the competition yourself.
+
+#### 12.5 Records and sequences
+
+Bundle a few role-filler bindings and you have a record inside one vector:
+
+```
+arli> define name-role vsa-encode 'name
+<vsa-vec>
+
+arli> define color-role vsa-encode 'color
+<vsa-vec>
+
+arli> define apple (vsa-bundle vsa-bind name-role 'apple vsa-bind color-role 'red)
+<vsa-vec>
+
+arli> vsa-register 'red
+red
+
+arli> vsa-cleanup vsa-unbind apple color-role
+red
+```
+
+`vsa-permute` turns a vector into a *position role*, which is how you keep order in an unordered bundle:
+
+```
+arli> define one vsa-encode 'one
+<vsa-vec>
+
+arli> define seq (vsa-bundle vsa-bind 'alpha vsa-permute one 0 vsa-bind 'beta vsa-permute one 1)
+<vsa-vec>
+
+arli> vsa-register 'alpha
+alpha
+
+arli> vsa-register 'beta
+beta
+
+arli> vsa-cleanup vsa-unbind seq vsa-permute one 1
+beta
+```
+
+#### 12.6 Pattern binding and factorization
+
+`vsa-match` binds `?variables` while walking VSA structure. A pattern is **data**, so it is quoted — the same convention VSA-Lisp uses. Positions are reached with `car`/`cdr` steps, so a pair chain is read exactly and a raw vector is read through unbinding plus cleanup at the leaf:
+
+```
+arli> vsa-match '(?x ?y) (vsa-list 'alpha 'beta)
+((?x alpha) (?y beta))
+
+arli> vsa-match '(?x _ ?z) (list 1 2 3)
+((?x 1) (?z 3))
+```
+
+Finally, `vsa-factorize` runs a resonator network: given a bundle of bound pairs and one candidate codebook per factor, it recovers the factors by alternately unbinding and snapping to the nearest candidate.
+
+```
+arli> define cb1 (list 'alpha 'beta)
+(alpha beta)
+
+arli> define cb2 (list 'gamma 'delta)
+(gamma delta)
+
+arli> define mixed (vsa-bundle vsa-bind 'alpha 'gamma vsa-bind 'beta 'delta)
+<vsa-vec>
+
+arli> (vsa-factorize mixed cb1 cb2)
+(alpha gamma)
+```
+
+#### 12.7 Limits worth knowing
+
+- Retrieval costs one unbinding per level. `vsa-car`/`vsa-cdr` on a raw vector resolve a single step (similarity ≈ 0.64 at 4096 dimensions) and never walk. `vsa-match` walks, and its leaf cleanup holds up for two levels (≈ 0.64, then ≈ 0.40) but falls under the 0.3 threshold at three: `vsa-match '(?x ?y ?z ?w) vsa-encode (vsa-list 'a 'b 'c 'd)` binds `a`, `b`, `nil`, `nil`. Walk the pair chain itself — `(vsa-list 'a 'b 'c 'd)` — and all four come back exactly, because pairs cache their halves.
+- A plain bundle is not readable on its own. With N unrelated items the highest similarity to a member is about 0.9/√N (0.302 at N = 10, 0.119 at N = 100), so `vsa-cleanup` of a large bundle returns `nil` — cue it with `vsa-unbind` first. Bundles are still *discriminable* at those sizes because 0.119 sits far above the ±0.016 noise floor.
+- Similarities are not exact arithmetic: float32 storage and random vectors mean recovered structure reads around 0.64 or 0.40, never 1.0.
+- State is per evaluator: a VSA program starts with an empty memory, and `vsa-clear` empties it on demand.
+- `vsa-seed` makes the random stream reproducible; named entities are hash-derived, so similarities for the same program are identical across runs and across backends.
+
+### Chapter 13: Where To Go From Here
 
 You now know enough to write real programs in arli. Here's what I'd suggest:
 

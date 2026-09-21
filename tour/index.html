@@ -6,8 +6,8 @@
   <title>A Tour of Arli — Interactive Arity-Driven Forth-Like Lisp</title>
 
   <!-- SEO Meta Tags -->
-  <meta name="description" content="Take an interactive tour of Arli, an arity-driven Forth-like Lisp programming language that eliminates parentheses with fixed-arity parsing, first-class F-expressions, and stack metaprogramming.">
-  <meta name="keywords" content="Arli, Lisp, Forth, Programming Language, Arity-driven, Parenthesis elimination, F-expressions, Functional Programming, Language Tour, Interactive REPL">
+  <meta name="description" content="Take an interactive tour of Arli, an arity-driven Forth-like Lisp programming language that eliminates parentheses with fixed-arity parsing, first-class F-expressions, stack metaprogramming, and built-in FHRR vector symbolic architecture.">
+  <meta name="keywords" content="Arli, Lisp, Forth, Programming Language, Arity-driven, Parenthesis elimination, F-expressions, Functional Programming, Language Tour, Interactive REPL, Vector Symbolic Architecture, VSA, Hyperdimensional Computing, FHRR">
   <meta name="author" content="Arli Language Team">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://xyzzyapps.github.io/arli/tour/">
@@ -16,14 +16,14 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://xyzzyapps.github.io/arli/tour/">
   <meta property="og:title" content="A Tour of Arli — Interactive Arity-Driven Forth-Like Lisp">
-  <meta property="og:description" content="Learn Arli in your browser: zero-parenthesis prefix arithmetic, recursion without parens, Forth stack manipulation, and first-class F-expressions.">
+  <meta property="og:description" content="Learn Arli in your browser: zero-parenthesis prefix arithmetic, recursion without parens, Forth stack manipulation, first-class F-expressions, and hyperdimensional vectors with bind/bundle/unbind.">
   <meta property="og:site_name" content="Arli Programming Language">
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:url" content="https://xyzzyapps.github.io/arli/tour/">
   <meta name="twitter:title" content="A Tour of Arli — Interactive Arity-Driven Forth-Like Lisp">
-  <meta name="twitter:description" content="Explore Arli: An arity-driven Forth-like Lisp dialect with zero-parenthesis syntax and first-class F-expressions.">
+  <meta name="twitter:description" content="Explore Arli: An arity-driven Forth-like Lisp dialect with zero-parenthesis syntax, first-class F-expressions, and a built-in FHRR vector symbolic architecture engine.">
 
   <!-- AEO (Answer Engine Optimization) & Structured Data -->
   <script type="application/ld+json">
@@ -35,13 +35,13 @@
         "name": "Arli",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Cross-platform",
-        "description": "An arity-driven Forth-like Lisp dialect eliminating parentheses through parse-time arity tables, featuring Forth stack reflection and F-expressions.",
+        "description": "An arity-driven Forth-like Lisp dialect eliminating parentheses through parse-time arity tables, featuring Forth stack reflection, F-expressions, and a dependency-free FHRR vector symbolic architecture engine.",
         "softwareRequirements": "Python, Go, or Modern Web Browser (WebAssembly/ESM)"
       },
       {
         "@type": "Course",
         "name": "A Tour of Arli",
-        "description": "An interactive 20-lesson guide to mastering Arli, covering prefix syntax, recursion without parentheses, Forth stack combinators, and F-expressions.",
+        "description": "An interactive 21-lesson guide to mastering Arli, covering prefix syntax, recursion without parentheses, Forth stack combinators, F-expressions, and vector symbolic architecture.",
         "provider": {
           "@type": "Organization",
           "name": "Arli Project"
@@ -81,6 +81,14 @@
               "@type": "Answer",
               "text": "Because dynamic parameter symbols have unknown arity at parse time, invoking dynamic function parameters requires explicit parentheses (e.g., (f (g 1 2))). Existing functions can be passed by value as quoted symbols (e.g., 'inc 'add) or anonymous closures."
             }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Arli support Vector Symbolic Architecture?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Arli includes a dependency-free FHRR engine: 4096-dimensional unit-phasor vectors with vsa-bind, vsa-bundle and vsa-unbind, vsa-similarity, VSA pairs built by vsa-cons, an associative cleanup memory (vsa-register/vsa-cleanup), pattern binding with vsa-match, and resonator factorization with vsa-factorize. The Python, JavaScript and Go backends implement the same semantics."
+            }
           }
         ]
       }
@@ -114,7 +122,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
         <span>Prev</span>
       </button>
-      <div id="page-indicator" class="page-indicator">1 / 20</div>
+      <div id="page-indicator" class="page-indicator">1 / 21</div>
       <button id="btn-next" class="nav-btn" title="Next Page (Right Arrow)">
         <span>Next</span>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>

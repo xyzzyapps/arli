@@ -20,9 +20,10 @@
  *   - . (print) falls back to console.log instead of process.stdout.write.
  */
 
-export { ArliSymbol, nil, Builtin, Function, isTruthy, arliRepr, arliEqual } from './types.js';
+export { ArliSymbol, nil, Builtin, Function, isTruthy, arliRepr, arliEqual, VSAVec, VSAPair } from './types.js';
 export { Environment } from './env.js';
 export { ArityTable, Parser, parseSource } from './parse.js';
 export { tokenize, TokenStream, TOKEN_OPEN, TOKEN_CLOSE, TOKEN_VECTOR_OPEN, TOKEN_VECTOR_CLOSE, TOKEN_MAP_OPEN, TOKEN_MAP_CLOSE, TOKEN_STRING, TOKEN_NUMBER, TOKEN_SYMBOL, TOKEN_QUOTE, TOKEN_QUASIQUOTE, TOKEN_UNQUOTE, TOKEN_UNQUOTE_SPLICE, TOKEN_KEYWORD } from './tokenize.js';
 export { Evaluator } from './eval.js';
 export { getBuiltins } from './builtins.js';
+export { getVsaBuiltins } from './vsa.js';

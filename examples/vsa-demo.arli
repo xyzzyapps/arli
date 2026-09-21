@@ -1,0 +1,112 @@
+;; VSA demo — Vector Symbolic Architecture (FHRR) on arli.
+;;
+;; Run with any backend:
+;;   python -m arli examples/vsa-demo.arli
+;;   node js/arli/src/main.js examples/vsa-demo.arli
+;;   go/arli/arli.exe examples/vsa-demo.arli
+;;
+;; Note: `print` has arity 1, so it always consumes the next expression —
+;; there are no bare `print` calls here.
+
+print "=== arli VSA demo ==="
+
+;; ---------------------------------------------------------------------------
+;; Vectors
+;; ---------------------------------------------------------------------------
+print "--- Vectors ---"
+print "dimension:"
+print vsa-dim
+
+vsa-seed 42
+define a vsa-random
+define b vsa-random
+print "two random vectors are near-orthogonal:"
+print < vsa-similarity a b 0.1
+
+;; ---------------------------------------------------------------------------
+;; Bind, unbind, bundle
+;; ---------------------------------------------------------------------------
+print "--- Bind, unbind, bundle ---"
+define bound vsa-bind 'alpha 'beta
+print "a bound pair is dissimilar to its components:"
+print < vsa-similarity bound vsa-encode 'alpha 0.1
+
+print "unbinding inverts binding exactly:"
+print > vsa-similarity vsa-unbind bound 'alpha vsa-encode 'beta 0.999
+
+print "a bundle stays similar to each of its parts:"
+print > vsa-similarity (vsa-bundle 'alpha 'beta 'gamma) vsa-encode 'alpha 0.5
+
+;; ---------------------------------------------------------------------------
+;; VSA pairs: structure inside a single vector
+;; ---------------------------------------------------------------------------
+print "--- VSA pairs ---"
+define p vsa-cons 'alpha 'beta
+print "pair:"
+print p
+print "car and cdr come from the pair's cache:"
+print vsa-car p
+print vsa-cdr p
+
+define xs (vsa-list 1 2 3)
+print "list:"
+print xs
+print "converted back to a plain arli list:"
+print vsa->list xs
+
+;; ---------------------------------------------------------------------------
+;; Cleanup memory: reading structure out of a plain vector
+;; ---------------------------------------------------------------------------
+print "--- Cleanup memory ---"
+vsa-register 'alpha
+vsa-register 'beta
+define enc vsa-encode (vsa-cons 'alpha 'beta)
+print "car of the encoded pair (unbind, then nearest neighbour):"
+print vsa-car enc
+print "cdr:"
+print vsa-cdr enc
+
+;; ---------------------------------------------------------------------------
+;; Role/filler records
+;; ---------------------------------------------------------------------------
+print "--- Role/filler records ---"
+define name-role vsa-encode 'name
+define color-role vsa-encode 'color
+define apple (vsa-bundle vsa-bind name-role 'apple vsa-bind color-role 'red)
+vsa-register 'apple
+vsa-register 'green
+vsa-register 'red
+print "color of the apple record:"
+print vsa-cleanup vsa-unbind apple color-role
+print "name of the apple record:"
+print vsa-cleanup vsa-unbind apple name-role
+
+;; ---------------------------------------------------------------------------
+;; Sequences with permuted roles
+;; ---------------------------------------------------------------------------
+print "--- Sequences with permuted roles ---"
+define one vsa-encode 'one
+vsa-register 'gamma
+define seq (vsa-bundle vsa-bind 'alpha vsa-permute one 0 vsa-bind 'beta vsa-permute one 1 vsa-bind 'gamma vsa-permute one 2)
+print "item stored at position 1:"
+print vsa-cleanup vsa-unbind seq vsa-permute one 1
+print "item stored at position 2:"
+print vsa-cleanup vsa-unbind seq vsa-permute one 2
+
+;; ---------------------------------------------------------------------------
+;; Pattern variables bind through unbinding
+;; ---------------------------------------------------------------------------
+print "--- Pattern variables ---"
+print vsa-match '(?x ?y) (vsa-list 'alpha 'beta)
+
+;; ---------------------------------------------------------------------------
+;; Resonator factorization
+;; ---------------------------------------------------------------------------
+print "--- Resonator factorization ---"
+define cb1 (list 'alpha 'beta)
+define cb2 (list 'gamma 'delta)
+define mixed (vsa-bundle vsa-bind 'alpha 'gamma vsa-bind 'beta 'delta)
+print "factors recovered from the bundle:"
+print (vsa-factorize mixed cb1 cb2)
+
+print "=== done ==="

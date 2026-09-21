@@ -638,6 +638,11 @@ func getBuiltins() map[string]*ArliBuiltin {
 		return ev.evalExpr(args[0])
 	}, 1)
 
+	// VSA (Vector Symbolic Architecture) primitives — additive extension
+	for name, vb := range getVsaBuiltins() {
+		b[name] = vb
+	}
+
 	return b
 }
 

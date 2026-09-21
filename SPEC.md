@@ -49,6 +49,15 @@ Source Code
                                                   |                   |
                                                   | + - * / cons ...  |
                                                   +-------------------+
+                                                          |
+                                                          v
+                                                  +-------------------+
+                                                  |   VSA engine      |
+                                                  | (vsa.py)          |
+                                                  |                   |
+                                                  | FHRR bind/bundle  |
+                                                  | vsa-* primitives  |
+                                                  +-------------------+
 ```
 
 ## Data Types
@@ -66,6 +75,8 @@ Source Code
 | `Function` | User-defined closure | `<fn add arity=2>` |
 | `list` | Python list (S-expression) | `(1 2 3)` |
 | `dict` | Python dict (via `hash-map`) | `{:a 1 :b 2}` |
+| `VSAVec` | Vector Symbolic Architecture vector (FHRR) | `vsa-encode 'alpha` → `<vsa-vec>` |
+| `VSAPair` | VSA-encoded cons pair with cached `car`/`cdr` | `vsa-cons 1 2` → `(1 . 2)` |
 
 ### Keywords
 Symbols starting with `:` are keywords — they self-evaluate. `:foo` evaluates to `:foo`.
@@ -312,6 +323,41 @@ Special forms supported inside `(exec)`:
 | `and-then` | 2 | Chain Ok result: `and-then result fn` — passes through Err |
 | `or-else` | 2 | Recover from Err: `or-else result fn` — passes through Ok |
 
+#### VSA (Vector Symbolic Architecture)
+
+All 27 words are built in; every fixed arity works without parentheses. Full
+semantics are in [VSA (Vector Symbolic Architecture)](#vsa-vector-symbolic-architecture).
+
+| Word | Arity | Description |
+|------|-------|-------------|
+| `vsa-dim` | 0 | Current vector dimension (default 4096) |
+| `vsa-reset` | 1 | Reinitialize the engine at a new dimension (4–65536), clearing memory |
+| `vsa-seed` | 1 | Reseed the random stream: `vsa-seed 7` |
+| `vsa-random` | 0 | New random vector from the stream |
+| `vsa-bind` | 2 | Binding (element-wise complex product) |
+| `vsa-bundle` | -1 | Bundling / superposition (sum, each component re-normalized to unit magnitude; variadic — parens) |
+| `vsa-majority` | -1 | FHRR centroid; identical to `vsa-bundle` for unit phasors |
+| `vsa-unbind` | 2 | Unbinding (multiply by conjugate — exact inverse of bind) |
+| `vsa-similarity` | 2 | Cosine similarity in `[-1, 1]` |
+| `vsa-permute` | 2 | Cyclic shift by n (negative shifts back) |
+| `vsa-encode` | 1 | Encode any encodable value to a vector |
+| `vsa-cons` | 2 | Create a VSA pair |
+| `vsa-car` | 1 | First element of a VSA pair / VSA vector / list |
+| `vsa-cdr` | 1 | Rest of a VSA pair / VSA vector / list |
+| `vsa-list` | -1 | Nil-terminated VSA pair chain (variadic — parens) |
+| `vsa->list` | 1 | Convert a VSA pair chain to a plain arli list |
+| `vsa-pair?` | 1 | Check if value is a `VSAPair` |
+| `vsa-vec?` | 1 | Check if value is a `VSAVec` |
+| `vsa-type` | 1 | Type class as a symbol: `symbol`, `number`, `pair`, `vsa-vec`, … |
+| `vsa-register` | 1 | Register a value in the cleanup memory |
+| `vsa-cleanup` | 1 | Nearest registered value above 0.3, else `nil` |
+| `vsa-query` | 2 | `vsa-query vec k` → VSA pairs `(similarity . value)`, nearest first |
+| `vsa-clear` | 0 | Empty the cleanup memory |
+| `vsa-factorize` | -1 | `(vsa-factorize bundle cb1 cb2 …)` — resonator factorization |
+| `vsa-match` | 2 | `vsa-match '(?x ?y) value` — bind `?vars` over VSA structure (pattern is data, so it is quoted) |
+| `vsa->floats` | 1 | Interleaved `re, im` floats of the encoded value |
+| `floats->vsa` | 1 | Wrap such a list back into a `VSAVec` |
+
 #### Testing
 
 | Word | Arity | Description |
@@ -510,6 +556,137 @@ defn-fexpr log-if (c t e)
 
 3. **Arity limits**: Like all arli functions, fexprs have a fixed arity. Variadic fexprs are not supported without parentheses.
 
+## VSA (Vector Symbolic Architecture)
+
+arli includes a self-contained **FHRR** (Fourier Holographic Reduced
+Representation) subsystem, ported from *VSA-Lisp* ("Velo"). Instead of encoding
+structure in pointers, structure is encoded in high-dimensional complex
+vectors: a pair is a single vector produced by binding and bundling, and
+`car`/`cdr` can be recovered by unbinding plus nearest-neighbour cleanup.
+
+```
+vsa-cons a b  =  bind(CAR, encode(a))  ⊕  bind(CDR, encode(b))
+vsa-car  p    =  cleanup( unbind(p, CAR) )
+```
+
+The engine has **no third-party dependencies** — the random generator, vector
+math and cleanup memory are implemented per backend. Python, JavaScript and Go
+run the same 32-bit PRNG, so a program produces **bit-identical** vectors and
+similarities on all three (verified against shared parity probes, e.g.
+`vsa-similarity (vsa-bundle 'alpha 'beta) (vsa-encode 'alpha)` = 0.6275918471608055
+everywhere).
+
+### Vector model
+
+| Property | Value |
+|----------|-------|
+| Dimension | 4096 by default (`vsa-dim`, changeable with `vsa-reset`) |
+| Representation | Unit-magnitude complex phasors, float32 `(re, im)` pairs |
+| Bind | Element-wise complex product (commutative) |
+| Unbind | Product with the conjugate — the exact inverse of bind |
+| Bundle / majority | Sum, then each component normalized back to unit magnitude (FHRR centroid) |
+| Similarity | Mean real part of the inner product, in `[-1, 1]` |
+| Permute | Cyclic shift of components (`vsa-permute v n`; negative n shifts back) |
+| Cleanup threshold | 0.3 |
+
+### Encoding values
+
+`vsa-encode` (and every primitive that takes "any value") maps a value to a vector:
+
+| Value | Encoding |
+|-------|----------|
+| symbol | deterministic vector from a hash of its name (stable across runs and backends) |
+| string | deterministic vector from a hash of its text |
+| number | fractional power encoding — numbers stay similar while they are close |
+| pair | `bind(CAR, encode(car))` bundled with `bind(CDR, encode(cdr))` |
+| list | nil-terminated chain of VSA pairs |
+| `nil`, `true`, `false` | fixed engine vectors |
+| map, builtin, fn | not encodable — raises `vsa: cannot encode …` |
+
+### Cleanup memory (associative retrieval)
+
+Unbinding a noisy vector leaves an approximate result. `vsa-register` stores
+`value → vector`; `vsa-cleanup` returns the nearest registered value above 0.3,
+`vsa-query` returns the k nearest with their similarities, and `vsa-clear`
+empties the memory. Memory is per evaluator, so programs start clean.
+
+### Examples
+
+```clojure
+;; Similarity and binding
+define a vsa-encode 'alpha
+define b vsa-encode 'beta
+< vsa-similarity a b 0.1          ;; true — unrelated symbols are orthogonal
+> vsa-similarity vsa-unbind vsa-bind 'alpha 'beta 'alpha vsa-encode 'beta 0.999
+;; true — unbind inverts bind exactly
+
+;; VSA pairs: car/cdr of a pair are exact because the pair caches them
+define p vsa-cons 'alpha 'beta
+vsa-car p                          ;; alpha
+vsa-cdr p                          ;; beta
+
+;; VSA lists and conversion to plain arli lists
+define xs (vsa-list 1 2 3)
+vsa->list xs                       ;; (1 2 3)
+vsa->list vsa-cdr xs               ;; (2 3)
+
+;; Structure inside a single vector, recovered through cleanup memory
+vsa-register 'alpha
+vsa-register 'beta
+define v vsa-encode (vsa-cons 'alpha 'beta)
+vsa-car v                          ;; alpha  (unbind + cleanup)
+vsa-cdr v                          ;; beta
+
+;; Pattern variables bind through the same unbinding path.
+;; Patterns are data, so they are quoted (as in VSA-Lisp):
+vsa-match '(?x ?y) (vsa-list 'alpha 'beta)   ;; ((?x alpha) (?y beta))
+
+;; Resonator factorization: recover the factors of a bundle
+define c1 (list 'alpha 'beta)
+define c2 (list 'gamma 'delta)
+define mixed (vsa-bundle vsa-bind 'alpha 'gamma vsa-bind 'beta 'delta)
+(vsa-factorize mixed c1 c2)        ;; (alpha gamma)
+```
+
+### Ranges and limits
+
+- Retrieval through a **raw vector** costs one unbinding per call: `vsa-car` /
+  `vsa-cdr` clean up a single step (≈ 0.64 similarity at D = 4096) and do not
+  walk. Walking several steps is `vsa-match`, whose leaf cleanup is reliable to
+  two levels (≈ 0.64, then ≈ 0.40) and drops below the 0.3 threshold at three —
+  measured: `vsa-match '(?x ?y ?z ?w) vsa-encode (vsa-list 'a 'b 'c 'd)` binds
+  `a`, `b`, then `nil`, `nil`.
+- Walk the `VSAPair` chain itself (or a plain list) instead of its encoding and
+  the read is exact at any depth, because pairs cache their `car`/`cdr` — the
+  same program with `(vsa-list 'a 'b 'c 'd)` binds all four.
+- A plain bundle of N unrelated items is **not** directly readable: the maximum
+  similarity to a member is ≈ 0.9/√N (measured 0.302 at N = 10, 0.119 at
+  N = 100, 0.081 at N = 300, against a ±0.016 noise floor), so `vsa-cleanup` of
+  the bundle itself clears 0.3 only for N ≲ 10, and what it returns is an
+  arbitrary member. Give retrieval a cue instead:
+  `vsa-cleanup vsa-unbind bundle role`.
+- `vsa-permute` shifts components by whole positions; it converts a component
+  into a *position role*. Encode an ordered sequence by binding each item to a
+  permuted role — `(vsa-bundle vsa-bind 'alpha vsa-permute one 0 vsa-bind 'beta vsa-permute one 1)`
+  — then read position i back with `vsa-cleanup vsa-unbind seq vsa-permute one i`.
+  Bundling bare `permute(item, i)` terms instead is cheaper but can only be
+  queried by scoring candidates, not by unbinding.
+- The random stream is deterministic once seeded (`vsa-seed`), and every
+  named entity has a hash-derived vector, so two runs of the same program
+  produce the same similarities.
+
+### Differences from VSA-Lisp (Velo)
+
+| VSA-Lisp | arli |
+|----------|------|
+| Global engine and cleanup memory | One engine per evaluator |
+| FHRR, MAP, BSC, HRR, GHRR selectable via `vsa-set-model` | Self-contained FHRR; `vsa-reset` changes dimension only |
+| `vsa-codebook` objects | Folded into `vsa-register` / `vsa-query` over the cleanup memory |
+| `vsa->array` / `array->vsa` numpy bridge | `vsa->floats` / `floats->vsa` over plain lists |
+| `cons` returns a VSA pair | Additive: `vsa-cons`; core `cons`/`car`/`cdr` keep list semantics |
+| `match` binds `?vars` | `match` unchanged (structural); `vsa-match` binds `?vars` through VSA |
+| `put`/`get`/`prop` property lists, `fexpr` | Already covered by arli's `hash-map` and `defn-fexpr` |
+
 ## Result Type (Ok / Err)
 
 The `Ok` and `Err` constructors create tagged values for error handling without exceptions:
@@ -662,6 +839,7 @@ python "{'a': 1}"          ;; evaluate Python expression
 | Dynamic eval | `host "code"` | N/A | `host "code"` via `new Function` |
 | Package loading | `import os` (dynamic) | Pre-registered only | `require('fs')` (sync) |
 | Extension | Write Python + register | Write Go + rebuild | Write JS + register |
+| VSA | Built in (FHRR, 27 words) | Built in (FHRR, 27 words) | Built in (FHRR, 27 words) |
 
 ## Future Directions
 
@@ -673,3 +851,4 @@ python "{'a': 1}"          ;; evaluate Python expression
 6. **Error Handling**: try/catch with stack traces
 7. **Performance**: JIT compilation, type inference
 8. **C Backend**: Native binary via C compilation
+9. **VSA models**: MAP/BSC/HRR backends and a selectable dimension/model beyond the built-in FHRR

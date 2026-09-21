@@ -9,6 +9,7 @@
  */
 
 import { ArliSymbol, nil, Builtin, Function, isTruthy, arliRepr, arliEqual } from './types.js';
+import { getVsaBuiltins } from './vsa.js';
 
 export function getBuiltins() {
   const b = {};
@@ -249,6 +250,9 @@ export function getBuiltins() {
 
   // Evaluation control
   reg('eval', (args, ev) => { if (!ev) return args[0]; return ev.evalForm(args[0]); }, 1);
+
+  // VSA (Vector Symbolic Architecture) — same reg style, separate module
+  Object.assign(b, getVsaBuiltins());
 
   return b;
 }

@@ -97,6 +97,45 @@ export class Function {
 }
 
 // ---------------------------------------------------------------------------
+// VSAVec / VSAPair — Vector Symbolic Architecture values
+// ---------------------------------------------------------------------------
+
+/**
+ * A VSA vector: float32 real/imaginary arrays of the engine's dimension.
+ * Opaque to the rest of arli — only `vsa-*` primitives consume or produce it.
+ */
+export class VSAVec {
+  constructor(re, im) {
+    this.re = re; // Float32Array
+    this.im = im; // Float32Array
+  }
+
+  toString() {
+    return '<vsa-vec>';
+  }
+
+  get [Symbol.toStringTag]() {
+    return 'vsa-vec';
+  }
+}
+
+/**
+ * A VSA pair: car/cdr plus a lazily computed encoding (`vec` stays null until
+ * the first `encode`). Prints as Lisp list syntax.
+ */
+export class VSAPair {
+  constructor(car, cdr, vec = null) {
+    this.car = car;
+    this.cdr = cdr;
+    this.vec = vec; // null until first encode
+  }
+
+  toString() {
+    return '<vsa-pair>';
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Truthiness
 // ---------------------------------------------------------------------------
 
@@ -142,6 +181,21 @@ export function arliRepr(val) {
   if (val instanceof Function) {
     return val.toString();
   }
+  if (val instanceof VSAVec) {
+    return '<vsa-vec>';
+  }
+  if (val instanceof VSAPair) {
+    const parts = [];
+    let node = val;
+    while (node instanceof VSAPair) {
+      parts.push(arliRepr(node.car));
+      node = node.cdr;
+    }
+    if (node === nil || node instanceof NilType) {
+      return '(' + parts.join(' ') + ')';
+    }
+    return '(' + parts.join(' ') + ' . ' + arliRepr(node) + ')';
+  }
   if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
     // Plain object (hash-map)
     const keys = Object.keys(val);
@@ -179,6 +233,16 @@ export function arliEqual(a, b) {
   }
   if (typeof a === 'boolean' && typeof b === 'boolean') {
     return a === b;
+  }
+  if (a instanceof VSAVec && b instanceof VSAVec) {
+    if (a.re.length !== b.re.length) return false;
+    for (let i = 0; i < a.re.length; i++) {
+      if (a.re[i] !== b.re[i] || a.im[i] !== b.im[i]) return false;
+    }
+    return true;
+  }
+  if (a instanceof VSAPair && b instanceof VSAPair) {
+    return arliEqual(a.car, b.car) && arliEqual(a.cdr, b.cdr);
   }
   return false;
 }

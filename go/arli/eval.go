@@ -19,6 +19,15 @@ type Evaluator struct {
 	GlobalEnv *Environment
 	Arities   *ArityTable
 	parser    *Parser
+	vsaEngine *vsaEngine // lazily created VSA engine (see vsa.go)
+}
+
+// vsa returns this evaluator's VSA engine, creating it on first use.
+func (ev *Evaluator) vsa() *vsaEngine {
+	if ev.vsaEngine == nil {
+		ev.vsaEngine = vsaNewEngine(vsaDefaultDim)
+	}
+	return ev.vsaEngine
 }
 
 func NewEvaluator() *Evaluator {
@@ -737,6 +746,12 @@ func arliEqual(a, b ArliValue) bool {
 	case ArliNil:
 		_, ok := b.(ArliNil)
 		return ok
+	case *ArliVSAVec:
+		vb, ok := b.(*ArliVSAVec)
+		return ok && vsaVecEqual(va, vb)
+	case *ArliVSAPair:
+		vb, ok := b.(*ArliVSAPair)
+		return ok && vsaPairEqual(va, vb)
 	}
 	return false
 }

@@ -18,6 +18,7 @@ from .types import Symbol, nil, Builtin, Function, is_truthy, arli_repr
 from .env import Environment
 from .parse import ArityTable, Parser, parse_source
 from .builtins import get_builtins
+from .vsa import VSAEngine, get_vsa_builtins
 
 
 # ---------------------------------------------------------------------------
@@ -47,6 +48,7 @@ class Evaluator:
         self.arity_table = ArityTable()
         self.debug = debug
         self._parser: Optional[Parser] = None
+        self._vsa_engine: Optional[VSAEngine] = None  # created on first VSA use
 
         # Load builtins
         self._load_builtins()
@@ -57,9 +59,18 @@ class Evaluator:
             self._parser = Parser(self.arity_table)
         return self._parser
 
+    @property
+    def vsa_engine(self) -> VSAEngine:
+        """The VSA engine owned by this evaluator, created on first use."""
+        if self._vsa_engine is None:
+            self._vsa_engine = VSAEngine()
+        return self._vsa_engine
+
     def _load_builtins(self) -> None:
         """Register all builtins in the environment and arity table."""
-        for name, builtin in get_builtins().items():
+        builtins = get_builtins()
+        builtins.update(get_vsa_builtins())
+        for name, builtin in builtins.items():
             self.global_env.define(name, builtin)
             if builtin.arity >= 0:
                 self.arity_table.register(name, builtin.arity)

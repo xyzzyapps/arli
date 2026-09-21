@@ -35,7 +35,7 @@ python -m http.server 8080 -d tour
 ```
 
 Features:
-- 20 comprehensive interactive lessons.
+- 21 comprehensive interactive lessons.
 - Split-pane layout with syntax-highlighted code editor.
 - In-browser execution via WebAssembly / JavaScript runtime.
 - Live Data Stack visualizer and execution output console.
@@ -64,6 +64,7 @@ Features:
 - **Unicode symbols**: Greek, Cyrillic, Chinese, math symbols as function names
 - **REPL**: Interactive with stack inspection, debug mode, multi-line input
 - **F-expressions**: User-defined functions that don't evaluate arguments eagerly; custom control flow via `defn-fexpr` and `eval`
+- **VSA (Vector Symbolic Architecture)**: Dependency-free FHRR hyperdimensional vectors — `vsa-bind`, `vsa-bundle`, `vsa-unbind`, `vsa-similarity`, VSA pairs via `vsa-cons`, cleanup memory, pattern binding with `vsa-match`, and resonator factorization
 
 ## Installation
 
@@ -83,6 +84,7 @@ python -m arli
 ### Run a file
 ```bash
 python -m arli examples/fizzbuzz.arli
+python -m arli examples/vsa-demo.arli    # hyperdimensional vectors (VSA)
 ```
 
 ### Evaluate an expression
@@ -243,6 +245,51 @@ show + 1 * 2 3          ;; returns raw AST, not 7
 
 **Caveat**: Parameter names must not match registered operator names (e.g., avoid `cond`, `list`, `not` as parameter names — they have arity and consume extra tokens).
 
+### VSA (Vector Symbolic Architecture)
+
+arli ships a dependency-free **FHRR** hyperdimensional vector engine, ported
+from *VSA-Lisp*. Vectors are unit-magnitude complex phasors in 4096 dimensions;
+a pair is a single vector built from role binding, so structure lives **inside**
+the vector and can be recovered by unbinding plus associative cleanup.
+
+```clojure
+define a vsa-encode 'alpha
+define b vsa-encode 'beta
+< vsa-similarity a b 0.1              ;; true — unrelated symbols are orthogonal
+
+define bound vsa-bind 'alpha 'beta
+> vsa-similarity vsa-unbind bound 'alpha vsa-encode 'beta 0.999
+;; true — unbind inverts bind exactly
+
+define p vsa-cons 'alpha 'beta
+vsa-car p                              ;; alpha
+vsa-cdr p                              ;; beta
+vsa->list (vsa-list 1 2 3)             ;; (1 2 3)
+
+;; Recover structure from a plain vector through the cleanup memory
+vsa-register 'alpha
+vsa-register 'beta
+define v vsa-encode (vsa-cons 'alpha 'beta)
+vsa-car v                              ;; alpha
+vsa-cdr v                              ;; beta
+
+;; Pattern variables bind through the same unbinding path
+;; (patterns are data, so they are quoted)
+vsa-match '(?x ?y) (vsa-list 'alpha 'beta)   ;; ((?x alpha) (?y beta))
+```
+
+Words (arity): `vsa-dim`(0) `vsa-reset`(1) `vsa-seed`(1) `vsa-random`(0)
+`vsa-bind`(2) `vsa-bundle`(-1) `vsa-majority`(-1) `vsa-unbind`(2)
+`vsa-similarity`(2) `vsa-permute`(2) `vsa-encode`(1) `vsa-cons`(2) `vsa-car`(1)
+`vsa-cdr`(1) `vsa-list`(-1) `vsa->list`(1) `vsa-pair?`(1) `vsa-vec?`(1)
+`vsa-type`(1) `vsa-register`(1) `vsa-cleanup`(1) `vsa-query`(2) `vsa-clear`(0)
+`vsa-factorize`(-1) `vsa-match`(2) `vsa->floats`(1) `floats->vsa`(1).
+
+Core `cons`/`car`/`cdr`/`list` are unchanged — VSA pairs and vectors are a
+separate data type reachable through `vsa-*` words. See
+[SPEC.md](SPEC.md#vsa-vector-symbolic-architecture) for full semantics and
+`examples/vsa-demo.arli` for a runnable demo.
+
 ## Complete Arity Table
 
 Every operator has a documented arity. Arity >= 0 = no parens needed. Arity -1 = variadic (parens required).
@@ -291,6 +338,7 @@ Every operator has a documented arity. Arity >= 0 = no parens needed. Arity -1 =
 | I/O | `print`(1) `.`(2) `read`(0) |
 | Types | `number?`(1) `string?`(1) `symbol?`(1) `fn?`(1) |
 | Result | `Ok`(1) `Err`(1) `map-ok`(2) `and-then`(2) `or-else`(2) |
+| VSA | `vsa-dim`(0) `vsa-reset`(1) `vsa-seed`(1) `vsa-random`(0) `vsa-bind`(2) `vsa-bundle`(-1) `vsa-majority`(-1) `vsa-unbind`(2) `vsa-similarity`(2) `vsa-permute`(2) `vsa-encode`(1) `vsa-cons`(2) `vsa-car`(1) `vsa-cdr`(1) `vsa-list`(-1) `vsa->list`(1) `vsa-pair?`(1) `vsa-vec?`(1) `vsa-type`(1) `vsa-register`(1) `vsa-cleanup`(1) `vsa-query`(2) `vsa-clear`(0) `vsa-factorize`(-1) `vsa-match`(2) `vsa->floats`(1) `floats->vsa`(1) |
 
 ## Development
 

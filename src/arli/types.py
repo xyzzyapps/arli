@@ -99,6 +99,52 @@ class Function(ArliType):
         kind = "fexpr" if self.is_fexpr else "fn"
         return f"<{kind} {self.name or 'anon'} arity={self.arity}>"
 
+
+class VSAVec(ArliType):
+    """A VSA (FHRR) vector: float32 `re`/`im` arrays of length D.
+
+    Reachable only through the `vsa-*` primitives. Equality is elementwise and
+    exact; comparing against a non-VSA value is false.
+    """
+
+    __slots__ = ("re", "im")
+
+    def __init__(self, re: Any, im: Any) -> None:
+        self.re = re
+        self.im = im
+
+    def __repr__(self) -> str:
+        return "<vsa-vec>"
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, VSAVec):
+            return False
+        return self.re == other.re and self.im == other.im
+
+
+class VSAPair(ArliType):
+    """A VSA pair: `car`, `cdr`, and `vec` — its vector, cached on first encode.
+
+    Reachable only through the `vsa-*` primitives. Equality compares car then
+    cdr recursively; comparing against a non-VSA value is false.
+    """
+
+    __slots__ = ("car", "cdr", "vec")
+
+    def __init__(self, car: Any, cdr: Any) -> None:
+        self.car = car
+        self.cdr = cdr
+        self.vec = None  # lazily computed by the engine's encode
+
+    def __repr__(self) -> str:
+        return "<vsa-pair>"
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, VSAPair):
+            return False
+        return self.car == other.car and self.cdr == other.cdr
+
+
 def is_truthy(val: Any) -> bool:
     """Check truthiness. Only nil is false."""
     return val is not nil and val is not False
@@ -128,4 +174,17 @@ def arli_repr(val: Any) -> str:
         return f"<builtin {val.name}>"
     if isinstance(val, Function):
         return f"<fn {val.name or 'anon'}>"
+    if isinstance(val, VSAVec):
+        return "<vsa-vec>"
+    if isinstance(val, VSAPair):
+        # Lisp list syntax: walk the chain of pairs; a nil tail closes the
+        # list, any other tail is printed dotted.
+        parts = []
+        node = val
+        while isinstance(node, VSAPair):
+            parts.append(arli_repr(node.car))
+            node = node.cdr
+        if node is nil:
+            return "(" + " ".join(parts) + ")"
+        return "(" + " ".join(parts) + " . " + arli_repr(node) + ")"
     return str(val)

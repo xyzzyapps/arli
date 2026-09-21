@@ -1,0 +1,186 @@
+;; VSA (Vector Symbolic Architecture) — self-contained FHRR engine
+;;
+;; Ported from lvsp (VSA-Lisp / Velo). Every expectation is float-free so all
+;; three backends (Python, JavaScript, Go) agree byte-for-byte.
+
+;; test: default dimension
+vsa-dim
+;; expect: 4096
+
+;; test: a random vector prints as <vsa-vec>
+vsa-random
+;; expect: <vsa-vec>
+
+;; test: seeding makes the stream reproducible
+vsa-seed 7
+;; expect: 7
+define p1 vsa-random
+;; expect: <vsa-vec>
+vsa-seed 7
+;; expect: 7
+define p2 vsa-random
+;; expect: <vsa-vec>
+> vsa-similarity p1 p2 0.999
+;; expect: true
+
+;; test: distinct random vectors are near-orthogonal
+< vsa-similarity p1 vsa-random 0.1
+;; expect: true
+
+;; test: encoding a symbol is deterministic
+> vsa-similarity vsa-encode 'alpha vsa-encode 'alpha 0.999
+;; expect: true
+
+;; test: bind is commutative in FHRR
+> vsa-similarity vsa-bind 'alpha 'beta vsa-bind 'beta 'alpha 0.999
+;; expect: true
+
+;; test: unbind is the exact inverse of bind
+> vsa-similarity vsa-unbind vsa-bind 'alpha 'beta 'alpha vsa-encode 'beta 0.999
+;; expect: true
+
+;; test: a bound pair is dissimilar to its own components
+< vsa-similarity vsa-bind 'alpha 'beta vsa-encode 'alpha 0.1
+;; expect: true
+
+;; test: a bundle is similar to each of its parts
+> vsa-similarity (vsa-bundle 'alpha 'beta) vsa-encode 'alpha 0.5
+;; expect: true
+
+;; test: majority is the FHRR centroid, identical to bundle
+> vsa-similarity (vsa-majority 'alpha 'beta 'gamma) (vsa-bundle 'alpha 'beta 'gamma) 0.999
+;; expect: true
+
+;; test: permutation destroys similarity, and its inverse restores it
+< vsa-similarity vsa-permute 'alpha 1 vsa-encode 'alpha 0.1
+;; expect: true
+> vsa-similarity vsa-permute vsa-permute 'alpha 1 -1 vsa-encode 'alpha 0.999
+;; expect: true
+
+;; test: numbers use fractional power encoding (nearby numbers stay similar)
+> vsa-similarity 100 101 0.9
+;; expect: true
+
+;; test: distant numbers are dissimilar
+< vsa-similarity 0 500000 0.5
+;; expect: true
+
+;; test: vsa-list builds a nil-terminated pair chain
+define lst (vsa-list 1 2 3)
+;; expect: (1 2 3)
+
+;; test: cons with an atom tail prints as a dotted pair
+define pr vsa-cons 'alpha 'beta
+;; expect: (alpha . beta)
+
+;; test: car and cdr of a VSA pair are exact
+vsa-car pr
+;; expect: alpha
+vsa-cdr pr
+;; expect: beta
+
+;; test: type predicates
+vsa-pair? pr
+;; expect: true
+vsa-pair? 'alpha
+;; expect: false
+vsa-vec? pr
+;; expect: false
+vsa-vec? vsa-encode 'alpha
+;; expect: true
+
+;; test: vsa->list converts a pair chain back to a plain arli list
+vsa->list lst
+;; expect: (1 2 3)
+vsa->list vsa-cdr lst
+;; expect: (2 3)
+
+;; test: car and cdr also work on plain arli lists
+vsa-car (list 10 20 30)
+;; expect: 10
+vsa-cdr (list 10 20 30)
+;; expect: (20 30)
+
+;; test: cleanup memory resolves unbound components of an encoded pair
+vsa-register 'alpha
+;; expect: alpha
+vsa-register 'beta
+;; expect: beta
+vsa-cleanup vsa-encode 'alpha
+;; expect: alpha
+vsa-cleanup vsa-encode "nobody registered this"
+;; expect: nil
+define enc vsa-encode (vsa-cons 'alpha 'beta)
+;; expect: <vsa-vec>
+vsa-car enc
+;; expect: alpha
+vsa-cdr enc
+;; expect: beta
+
+;; test: vsa-query returns similarity/value pairs, nearest first
+vsa-cdr vsa-car vsa-query vsa-encode 'alpha 1
+;; expect: alpha
+
+;; test: vsa-match binds ?vars over VSA pair chains (exact)
+vsa-match '(?x ?y) (vsa-list 'alpha 'beta)
+;; expect: ((?x alpha) (?y beta))
+
+;; test: vsa-match skips _ and works on plain lists
+vsa-match '(?x _ ?z) (list 1 2 3)
+;; expect: ((?x 1) (?z 3))
+
+;; test: vsa-match extracts through unbinding plus cleanup memory
+vsa-match '(?x ?y) vsa-encode (vsa-list 'alpha 'beta)
+;; expect: ((?x alpha) (?y beta))
+
+;; test: vsa-clear empties the cleanup memory
+vsa-clear
+;; expect: nil
+vsa-cleanup vsa-encode 'alpha
+;; expect: nil
+
+;; test: type class reporting
+vsa-type 'alpha
+;; expect: symbol
+vsa-type 42
+;; expect: number
+vsa-type "text"
+;; expect: string
+vsa-type nil
+;; expect: nil
+vsa-type true
+;; expect: bool
+vsa-type (list 1 2)
+;; expect: list
+vsa-type {:a 1}
+;; expect: map
+vsa-type (vsa-cons 1 2)
+;; expect: pair
+vsa-type (vsa-encode 1)
+;; expect: vsa-vec
+vsa-type list
+;; expect: builtin
+vsa-type (fn (x) x)
+;; expect: fn
+
+;; test: raw float round trip through the dependency-free representation
+> vsa-similarity (floats->vsa (vsa->floats p1)) p1 0.999
+;; expect: true
+
+;; test: resonator factorization recovers the bound pair from a bundle
+define c1 (list 'alpha 'beta)
+;; expect: (alpha beta)
+define c2 (list 'gamma 'delta)
+;; expect: (gamma delta)
+define mixed (vsa-bundle vsa-bind 'alpha 'gamma vsa-bind 'beta 'delta)
+;; expect: <vsa-vec>
+(vsa-factorize mixed c1 c2)
+;; expect: (alpha gamma)
+
+;; test: resetting the dimension reinitializes the engine
+vsa-reset 64
+;; expect: 64
+vsa-dim
+;; expect: 64
+vsa-encode 'alpha
+;; expect: <vsa-vec>

@@ -1,0 +1,12 @@
+;; Temperature 0 is deduction, from Domingos, Tensor Logic, section 5.
+;;
+;; Parent(Alice, Bob) and Parent(Bob, Charlie) are the only facts.
+;; The ancestor rule derives Ancestor(Alice, Charlie). It does not invent
+;; Parent(Alice, Charlie), and it does not copy the entailment onto Dana
+;; even though Dana's embedding is close to Charlie.
+;; Raising T lets Dana borrow Charlie's entailment. Setting T back to 0
+;; shuts that borrow off.
+;;
+;; Run:  cd go/arli && go run . ../../examples/zero-temp.arli
+
+demo-zero-temp

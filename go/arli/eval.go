@@ -20,6 +20,7 @@ type Evaluator struct {
 	Arities   *ArityTable
 	parser    *Parser
 	vsaEngine *vsaEngine // lazily created VSA engine (see vsa.go)
+	eqEngine  *eqStore   // tensor-logic equation store (see equation.go)
 }
 
 // vsa returns this evaluator's VSA engine, creating it on first use.

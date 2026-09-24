@@ -647,6 +647,12 @@ func getBuiltins() map[string]*ArliBuiltin {
 	for name, tb := range getTensorBuiltins() {
 		b[name] = tb
 	}
+	for name, nb := range getNNBuiltins() {
+		b[name] = nb
+	}
+	for name, eb := range getEqBuiltins() {
+		b[name] = eb
+	}
 
 	return b
 }

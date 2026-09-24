@@ -1860,6 +1860,105 @@ examples are for the Go binary. `GOMLX_BACKEND=xla:cuda` runs the same graphs
 on an NVIDIA GPU. WebGPU is the ONNX provider `onnx:webgpu`, which GoMLX
 compiles in on Linux and WebAssembly.
 
+#### 13.1 Zero temperature is deduction
+
+Section 5 of the paper is the part that matters for reliability. A rule
+sigmoid `1 / (1 + exp(-x / T))` becomes the step function as `T` goes to 0.
+On exact symbols that is ordinary forward chaining: an atom is 1 only when
+the rules derive it, and 0 otherwise. Similar embeddings do not get to fill
+in a plausible answer. Raising `T` reads the same closure through
+`softmax(Gram / T)`, and then a neighbour can borrow an entailment. Putting
+`T` back to 0 sharpens the Gram matrix to the identity and the borrow
+disappears.
+
+The facts in the demo are `Parent(Alice, Bob)` and `Parent(Bob, Charlie)`.
+Dana is in no fact, but her embedding has cosine 0.95 with Charlie. Run it
+from `go/arli`:
+
+```
+go run . ../../examples/zero-temp.arli
+```
+
+```
+T = 0   step function, deductive closure
+  Ancestor(Alice, Bob)      1   stored parent, so ancestor
+  Ancestor(Alice, Charlie)  1   entailed by the rule, not stored
+  Parent(Alice, Charlie)    0   not a fact, and the rule does not add one
+  Ancestor(Alice, Dana)     0   nearest neighbour of Charlie, still false
+
+Same closure, read through softmax(Gram / T)
+  T = 1     Ancestor(Alice, Charlie) 0.307    Ancestor(Alice, Dana) 0.295
+  T = 0.01  Ancestor(Alice, Charlie) 0.993    Ancestor(Alice, Dana) 0.007
+  T = 0     Ancestor(Alice, Charlie) 1        Ancestor(Alice, Dana) 0
+```
+
+At temperature 1, Dana and Charlie look the same. At temperature 0, Charlie
+is an ancestor because the rule says so, and Dana is not. The direct parent
+edge Alice–Charlie stays 0 as well: the closure adds the entailed atom and
+does not invent a new fact.
+
+`nn-attention` and `nn-linear` are the transformer pieces from section 4.
+`examples/tabular.arli` runs those.
+
+#### 13.2 Writing a program
+
+A program is a set of named tensors and a set of equations. `tensor-run`
+forward-chains them. Two equations with the same left-hand side and the same
+nonlinearity are added together, and the nonlinearity runs once, which is the
+paper's implicit sum. A parenthesized term is a product. Separate terms are
+the sum inside the nonlinearity. `'(sig 0)` is the step function; `'(sig 1)`
+is the sigmoid at temperature 1.
+
+```
+tensor-def 'Parent (tensor '(x y) '(4 4)
+	0 1 0 0
+	0 0 1 0
+	0 0 0 0
+	0 0 0 0)
+(tensor-eq 'Ancestor '(x z) 'step
+	'(Parent x z)
+	'((Ancestor x y) (Parent y z)))
+tensor-run 4
+tensor-at tensor-get 'Ancestor '(0 2)    ;; Alice, Charlie: 1
+tensor-at tensor-get 'Ancestor '(0 3)    ;; Alice, Dana: 0
+```
+
+`examples/equations.arli` is that program. People are Alice, Bob, Charlie,
+Dana, in that order.
+
+Section 5's relation embedding is `tensor-embed-rel`. It builds
+`EmbR[i,j] = R[x,y] Emb[x,i] Emb[y,j]`. `tensor-embed-get` multiplies the
+query embeddings back on and returns the whole relation, so a neighbour of
+Charlie picks up some of Charlie's facts. That leak is the analogical mode.
+Temperature 0 on the rule, as in the previous section, does not do it.
+
+To learn, mark the unknown tensors and name a scalar loss. `tensor-fit`
+unrolls the equations (`tensor-chain`, or the depth you last passed to
+`tensor-run`) and steps the marked tensors with GoMLX's reverse mode.
+
+```
+tensor-learn 'W
+tensor-learn 'B
+(tensor-eq 'Logit '(n) 'id '((X n d) (W d)) '(B))
+(tensor-loss 'bce 'Logit 'Y)
+tensor-fit 80 0.8
+```
+
+`tensor-loss` is `bce`, `mse`, or `sum`.
+
+#### 13.3 What is still not in the paper's catalogue
+
+- Backward chaining. `tensor-run` is forward chaining only.
+- Sparse Datalog facts, slices, index arithmetic (`t+1`), and virtual
+  indices (`*t`). Relations are dense tensors.
+- Convolution, graph nets, a full transformer, kernel machines, and
+  graphical models as packaged words. The equations they are written with
+  are the ones above.
+- Backprop through a derivation that changes shape from example to example.
+  `tensor-fit` differentiates a fixed unroll.
+- Section 6: a database engine for the sparse part, and Tucker decomposition
+  onto the GPU. Dense equations run on the selected GoMLX backend.
+
 ### Chapter 14: Where To Go From Here
 
 You now know enough to write real programs in arli. Here's what I'd suggest:
@@ -1874,7 +1973,7 @@ You now know enough to write real programs in arli. Here's what I'd suggest:
 
 5. **Build something real**. A file renamer. A JSON processor. A web scraper using `import requests`. arli is a scripting language — use it like one.
 
-6. **Try a tensor equation**. From `go/arli`, run `go run . ../../examples/tensor-logic.arli`. One join and one projection is both a logic rule and a neural-net layer.
+6. **Try a tensor equation**. From `go/arli`, run `go run . ../../examples/tensor-logic.arli`, then `go run . ../../examples/zero-temp.arli`. The second one is the paper's temperature-0 claim: entailed atoms are 1, and a near neighbour stays 0.
 
 The complete reference is in [SPEC.md](SPEC.md). The source code is in `src/arli/`. It's about 600 lines of Python — read it, modify it, make it your own.
 

@@ -1,0 +1,22 @@
+;; A tensor-logic program: two equations, one left-hand side, forward chaining.
+;;
+;;   Ancestor(x,z) = step( Parent(x,z) + Ancestor(x,y) Parent(y,z) )
+;;
+;; People, in order: Alice, Bob, Charlie, Dana.
+;; Facts: Parent(Alice, Bob), Parent(Bob, Charlie).
+;; A term in parentheses is a product (a join). Separate terms are summed,
+;; then the nonlinearity runs. '(sig 0) is the same function as 'step.
+;;
+;; Run:  cd go/arli && go run . ../../examples/equations.arli
+
+tensor-def 'Parent (tensor '(x y) '(4 4)
+	0 1 0 0
+	0 0 1 0
+	0 0 0 0
+	0 0 0 0)
+(tensor-eq 'Ancestor '(x z) 'step
+	'(Parent x z)
+	'((Ancestor x y) (Parent y z)))
+tensor-run 4
+print tensor-at tensor-get 'Ancestor '(0 2)
+print tensor-at tensor-get 'Ancestor '(0 3)

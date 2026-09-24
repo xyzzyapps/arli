@@ -1,0 +1,25 @@
+;; A small tabular model on the Go backend.
+;;
+;; Tabular foundation models (TabPFN and the line discussed on Machine
+;; Learning Street Talk) predict a new row by attention over the training
+;; table: the query is the context, the labels are the values. nn-tab-attend
+;; is that forward pass with the features themselves as the embedding.
+;; nn-attention is the same scaled dot-product used inside a transformer.
+;; nn-fit-logit is ordinary supervised learning: GoMLX differentiates a
+;; linear classifier and steps it.
+;;
+;; Run:  cd go/arli && go run . ../../examples/tabular.arli
+
+define train (tensor '(n d) '(4 2) 1 0  0.9 0.1  0 1  0.1 0.9)
+define labels (tensor 'n 0 0 1 1)
+define queries (tensor '(m d) '(2 2) 0.05 1  1 0.05)
+print tensor->list nn-tab-attend train labels queries
+
+define X (tensor '(n d) '(6 2)
+	0 0  0.2 0.1  0.1 0.3
+	1 1  0.9 1.1  1.2 0.8)
+define y (tensor 'n 0 0 0 1 1 1)
+define fit nn-fit-logit X y 80 0.8
+print tensor->list car fit
+print car cdr fit
+print car cdr cdr fit

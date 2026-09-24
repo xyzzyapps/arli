@@ -65,6 +65,7 @@ Features:
 - **REPL**: Interactive with stack inspection, debug mode, multi-line input
 - **F-expressions**: User-defined functions that don't evaluate arguments eagerly; custom control flow via `defn-fexpr` and `eval`
 - **VSA (Vector Symbolic Architecture)**: Dependency-free FHRR hyperdimensional vectors — `vsa-bind`, `vsa-bundle`, `vsa-unbind`, `vsa-similarity`, VSA pairs via `vsa-cons`, cleanup memory, pattern binding with `vsa-match`, and resonator factorization
+- **Tensor logic (Go)**: Dense tensors with named axes. `tensor-join` and `tensor-project` are the two operators of Pedro Domingos's tensor logic; `tensor-einsum` is the same pair written as a NumPy subscript. Execution goes through [GoMLX](https://github.com/gomlx/gomlx)
 
 ## Installation
 
@@ -85,6 +86,7 @@ python -m arli
 ```bash
 python -m arli examples/fizzbuzz.arli
 python -m arli examples/vsa-demo.arli    # hyperdimensional vectors (VSA)
+cd go/arli && go run . ../../examples/tensor-logic.arli   # tensor logic (GoMLX)
 ```
 
 ### Evaluate an expression
@@ -290,6 +292,43 @@ separate data type reachable through `vsa-*` words. See
 [SPEC.md](SPEC.md#vsa-vector-symbolic-architecture) for full semantics and
 `examples/vsa-demo.arli` for a runnable demo.
 
+### Tensor logic (Go backend)
+
+A tensor-logic program is a set of tensor equations. Each equation joins
+tensors on the indices they share, projects away every index that does not
+appear on the left-hand side, and may apply one elementwise function. That is
+the whole language in the paper: a Datalog rule and a neural-net layer are the
+same statement, differing only in the numbers stored in the tensors.
+
+In arli the two operators are words. Axes are names. A name that appears on
+both arguments of `tensor-join` is the index being joined; `tensor-project`
+sums it out. `tensor-max` and `tensor-mean` are the paper's `max=` and `avg=`
+aggregators. `tensor-step` is the Heaviside function that turns a summed join
+back into a Boolean relation.
+
+```clojure
+;; Y = step(W[i] X[i])  — the perceptron from the paper
+define W (tensor 'i 0.2 1.9 -0.7 3)
+define X (tensor 'i 0 1 1 0)
+tensor->list tensor-step tensor-project tensor-join W X 'i   ;; (1.0)
+
+;; Aunt(x,z) <- Sister(x,y), Parent(y,z)
+define Sister (tensor '(x y) '(3 3) 0 1 0  0 0 0  0 0 0)
+define Parent (tensor '(y z) '(3 3) 0 0 0  0 0 1  0 0 0)
+tensor-step tensor-project tensor-join Sister Parent 'y
+```
+
+`tensor-einsum` is that join followed by a sum-projection, written the way
+NumPy writes it: `(tensor-einsum "ij,jk->ik" A B)`.
+
+These words run as [GoMLX](https://github.com/gomlx/gomlx) graphs. With
+`GOMLX_BACKEND` unset, the portable `go` backend is used. `xla:cuda` selects
+an NVIDIA GPU through XLA. WebGPU (`onnx:webgpu`) is available in GoMLX on
+Linux and WebAssembly, where that ONNX provider is compiled in. The Python
+and JavaScript interpreters do not include these words. Run
+`examples/tensor-logic.arli` with `go run` from `go/arli`. The operator list
+is in [SPEC.md](SPEC.md#tensor-logic).
+
 ## Complete Arity Table
 
 Every operator has a documented arity. Arity >= 0 = no parens needed. Arity -1 = variadic (parens required).
@@ -339,6 +378,7 @@ Every operator has a documented arity. Arity >= 0 = no parens needed. Arity -1 =
 | Types | `number?`(1) `string?`(1) `symbol?`(1) `fn?`(1) |
 | Result | `Ok`(1) `Err`(1) `map-ok`(2) `and-then`(2) `or-else`(2) |
 | VSA | `vsa-dim`(0) `vsa-reset`(1) `vsa-seed`(1) `vsa-random`(0) `vsa-bind`(2) `vsa-bundle`(-1) `vsa-majority`(-1) `vsa-unbind`(2) `vsa-similarity`(2) `vsa-permute`(2) `vsa-encode`(1) `vsa-cons`(2) `vsa-car`(1) `vsa-cdr`(1) `vsa-list`(-1) `vsa->list`(1) `vsa-pair?`(1) `vsa-vec?`(1) `vsa-type`(1) `vsa-register`(1) `vsa-cleanup`(1) `vsa-query`(2) `vsa-clear`(0) `vsa-factorize`(-1) `vsa-match`(2) `vsa->floats`(1) `floats->vsa`(1) |
+| Tensor logic (Go) | `tensor`(-1) `tensor?`(1) `tensor-shape`(1) `tensor-axes`(1) `tensor->list`(1) `tensor-at`(2) `tensor-set!`(3) `tensor-add`(2) `tensor-sub`(2) `tensor-mul`(2) `tensor-join`(2) `tensor-project`(2) `tensor-max`(2) `tensor-mean`(2) `tensor-einsum`(-1) `tensor-step`(1) `tensor-relu`(1) `tensor-sig`(1) `tensor-exp`(1) `tensor-softmax`(2) `tensor-lnorm`(2) |
 
 ## Development
 

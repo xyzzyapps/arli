@@ -581,6 +581,62 @@ print vsa-cdr v
 ;; Pattern variables bind through unbinding (patterns are quoted data)
 print vsa-match '(?x ?y) (vsa-list 'alpha 'beta)
 `
+  },
+  {
+    id: 'tensor-logic',
+    title: '22. Tensor Logic',
+    article: `
+      <h2>Tensor logic</h2>
+      <p>Pedro Domingos's <a href="https://arxiv.org/abs/2510.12269">tensor logic</a>
+      has one kind of statement: a tensor equation. A relation is a Boolean
+      tensor. Joining two relations on a shared argument, then dropping that
+      argument, is Einstein summation. A step function turns the sum back into
+      true or false, because several witnesses would otherwise add past 1.</p>
+      <p>The same equation on real numbers is a neural net. The perceptron in the
+      paper is</p>
+      <pre><code>Y = step(W[i] X[i])</code></pre>
+      <p>which joins <code>W</code> and <code>X</code> on <code>i</code>, sums
+      <code>i</code> away, and steps. In the Go backend that is two words:</p>
+      <pre><code>define W (tensor 'i 0.2 1.9 -0.7 3)
+define X (tensor 'i 0 1 1 0)
+tensor-step tensor-project tensor-join W X 'i    ;; 1.0</code></pre>
+      <p>The dot product is 1.2, and the step of a positive number is 1. A logic
+      rule is the identical shape. <code>Aunt(x,z) &lt;- Sister(x,y), Parent(y,z)</code>
+      joins on <code>y</code> and projects <code>y</code> out:</p>
+      <pre><code>define Sister (tensor '(x y) '(3 3) 0 1 0  0 0 0  0 0 0)
+define Parent (tensor '(y z) '(3 3) 0 0 0  0 0 1  0 0 0)
+tensor-step tensor-project tensor-join Sister Parent 'y</code></pre>
+      <p><code>Sister(0,1)</code> and <code>Parent(1,2)</code> make
+      <code>Aunt(0,2)</code> the only 1 in the result.
+      <code>(tensor-einsum "ij,jk-&gt;ik" A B)</code> is the NumPy spelling of
+      one join plus one sum. <code>tensor-relu</code>, <code>tensor-sig</code>,
+      <code>tensor-softmax</code> and <code>tensor-lnorm</code> are the
+      elementwise functions used for deeper nets.</p>
+      <div class="info-box">
+        <p>These words run as <a href="https://github.com/gomlx/gomlx">GoMLX</a>
+        graphs, so they are on the Go backend rather than in this browser
+        REPL. From <code>go/arli</code>:</p>
+        <pre><code>go run . ../../examples/tensor-logic.arli</code></pre>
+        <p>Leave <code>GOMLX_BACKEND</code> unset for the portable engine, or set
+        <code>xla:cuda</code> for an NVIDIA GPU. WebGPU is
+        <code>onnx:webgpu</code> on GoMLX's Linux and WebAssembly builds.</p>
+      </div>
+    `,
+    code: `;; Tensor logic runs on the Go backend (GoMLX), not in this
+;; browser REPL. The equation below is the perceptron from the paper:
+;;
+;;   Y = step(W[i] X[i])
+;;   W = [0.2, 1.9, -0.7, 3]
+;;   X = [0, 1, 1, 0]
+;;   dot product = 1.2, step = 1
+;;
+;;   cd go/arli
+;;   go run . ../../examples/tensor-logic.arli
+
+print "Join on a shared index, project it away, then step."
+print "That is a logic rule and a perceptron."
+print "See examples/tensor-logic.arli"
+`
   }
 ];
 

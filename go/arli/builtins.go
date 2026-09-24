@@ -643,6 +643,11 @@ func getBuiltins() map[string]*ArliBuiltin {
 		b[name] = vb
 	}
 
+	// Tensor-logic operators (dense arrays; see tensor.go)
+	for name, tb := range getTensorBuiltins() {
+		b[name] = tb
+	}
+
 	return b
 }
 

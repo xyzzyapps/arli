@@ -1803,7 +1803,64 @@ arli> (vsa-factorize mixed cb1 cb2)
 - State is per evaluator: a VSA program starts with an empty memory, and `vsa-clear` empties it on demand.
 - `vsa-seed` makes the random stream reproducible; named entities are hash-derived, so similarities for the same program are identical across runs and across backends.
 
-### Chapter 13: Where To Go From Here
+### Chapter 13: Tensor Logic
+
+Tensor logic, from Pedro Domingos's paper
+[*Tensor Logic: The Language of AI*](https://arxiv.org/abs/2510.12269),
+starts from one observation. A Datalog rule such as
+
+```
+Aunt(x, z) <- Sister(x, y), Parent(y, z)
+```
+
+joins two tables on `y` and throws `y` away. Einstein summation does the same
+thing to tensors: multiply where the index is shared, add up every index that
+the result does not keep. Put a step function on that sum and the tensor
+equation *is* the rule. Store real weights instead of Booleans and the same
+equation is a perceptron:
+
+```
+Y = step(W[i] X[i])
+```
+
+The Go backend spells those two operators as words. `tensor-join` multiplies
+elements that agree on axes of the same name and keeps those axes.
+`tensor-project` sums a named axis away. `tensor-step` is the Heaviside
+function.
+
+```
+arli> define W (tensor 'i 0.2 1.9 -0.7 3)
+<tensor i:4>
+
+arli> define X (tensor 'i 0 1 1 0)
+<tensor i:4>
+
+arli> tensor->list tensor-step tensor-project tensor-join W X 'i
+(1.0)
+```
+
+The dot product is `0.2·0 + 1.9·1 + -0.7·1 + 3·0 = 1.2`, and the step of a
+positive number is 1. The aunt rule is the identical program with 0/1
+tensors: `Sister` has axes `x` and `y`, `Parent` has `y` and `z`, the join
+keeps all three, and projecting `y` then stepping leaves `Aunt[x,z]`.
+
+`(tensor-einsum "ij,jk->ik" A B)` is the NumPy spelling of one join plus one
+sum-projection. `tensor-relu`, `tensor-sig`, `tensor-softmax` and
+`tensor-lnorm` are the elementwise functions the paper uses for multilayer
+nets and transformers.
+
+These words run as GoMLX graphs. From `go/arli`:
+
+```
+go run . ../../examples/tensor-logic.arli
+```
+
+The Python and browser interpreters do not have them, so this chapter's
+examples are for the Go binary. `GOMLX_BACKEND=xla:cuda` runs the same graphs
+on an NVIDIA GPU. WebGPU is the ONNX provider `onnx:webgpu`, which GoMLX
+compiles in on Linux and WebAssembly.
+
+### Chapter 14: Where To Go From Here
 
 You now know enough to write real programs in arli. Here's what I'd suggest:
 
@@ -1816,6 +1873,8 @@ You now know enough to write real programs in arli. Here's what I'd suggest:
 4. **Explore exec stack programming**. Try building a program with `exec-push` and running it with `(exec)`. Then try having the program modify itself during execution.
 
 5. **Build something real**. A file renamer. A JSON processor. A web scraper using `import requests`. arli is a scripting language — use it like one.
+
+6. **Try a tensor equation**. From `go/arli`, run `go run . ../../examples/tensor-logic.arli`. One join and one projection is both a logic rule and a neural-net layer.
 
 The complete reference is in [SPEC.md](SPEC.md). The source code is in `src/arli/`. It's about 600 lines of Python — read it, modify it, make it your own.
 

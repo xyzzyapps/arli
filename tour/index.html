@@ -6,7 +6,7 @@
   <title>A Tour of Arli — Interactive Arity-Driven Forth-Like Lisp</title>
 
   <!-- SEO Meta Tags -->
-  <meta name="description" content="Take an interactive tour of Arli, an arity-driven Forth-like Lisp programming language that eliminates parentheses with fixed-arity parsing, first-class F-expressions, stack metaprogramming, and built-in FHRR vector symbolic architecture.">
+  <meta name="description" content="Take an interactive tour of Arli, an arity-driven Forth-like Lisp. The tour covers parenthesis-free parsing, F-expressions, stack metaprogramming, FHRR vector symbolic architecture, and tensor logic: join and projection as one equation for rules and neural nets.">
   <meta name="keywords" content="Arli, Lisp, Forth, Programming Language, Arity-driven, Parenthesis elimination, F-expressions, Functional Programming, Language Tour, Interactive REPL, Vector Symbolic Architecture, VSA, Hyperdimensional Computing, FHRR">
   <meta name="author" content="Arli Language Team">
   <meta name="robots" content="index, follow">
@@ -80,6 +80,14 @@
             "acceptedAnswer": {
               "@type": "Answer",
               "text": "Because dynamic parameter symbols have unknown arity at parse time, invoking dynamic function parameters requires explicit parentheses (e.g., (f (g 1 2))). Existing functions can be passed by value as quoted symbols (e.g., 'inc 'add) or anonymous closures."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is tensor logic in Arli?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Tensor logic treats a Datalog rule and an Einstein summation as the same operation. On the Go backend, tensor-join multiplies tensors on shared named axes and tensor-project sums those axes away. tensor-step turns the result into a Boolean, which is how Aunt(x,z) <- Sister(x,y), Parent(y,z) and a one-layer perceptron are the same program. The graphs run on GoMLX. The browser tour explains the idea; the words themselves run with go run in go/arli."
             }
           },
           {

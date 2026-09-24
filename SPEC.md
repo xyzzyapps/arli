@@ -687,6 +687,67 @@ define mixed (vsa-bundle vsa-bind 'alpha 'gamma vsa-bind 'beta 'delta)
 | `match` binds `?vars` | `match` unchanged (structural); `vsa-match` binds `?vars` through VSA |
 | `put`/`get`/`prop` property lists, `fexpr` | Already covered by arli's `hash-map` and `defn-fexpr` |
 
+## Tensor logic
+
+Tensor logic (Domingos, 2025, [arXiv:2510.12269](https://arxiv.org/abs/2510.12269))
+is the observation that a Datalog rule and an Einstein summation are the same
+operation. A relation is a Boolean tensor. Joining two relations on their
+shared arguments is multiplying the tensors on the shared indices. Projecting
+the result onto the head's arguments is summing away every other index. A step
+function then turns that sum back into 0 or 1, because more than one witness
+would otherwise add up past 1.
+
+The same equation on real numbers is a neural-net layer. `Y = step(W[i] X[i])`
+joins a weight vector and an input vector on `i`, projects `i` away, and
+applies the step function: a one-layer perceptron.
+
+These words are implemented on the **Go backend** and executed as
+[GoMLX](https://github.com/gomlx/gomlx) graphs. They are not in the Python or
+JavaScript interpreters. The default backend is the portable `go` engine
+(`GOMLX_BACKEND` unset). `GOMLX_BACKEND=xla:cuda` uses XLA. WebGPU is
+`GOMLX_BACKEND=onnx:webgpu` on the Linux and WebAssembly builds of GoMLX,
+where the ONNX Runtime WebGPU provider is compiled in.
+
+A tensor carries named axes. An axis built from a bare shape (`(tensor '(2 3) ...)`)
+is private (`_0`, `_1`) and never matches another tensor. A quoted symbol or a
+list of symbols names the axes that join.
+
+| Word | Arity | Description |
+|------|-------|-------------|
+| `tensor` | -1 | Build a tensor. `(tensor 'i 1 2 3)`, `(tensor '(i j) '(2 3) ...)`, `(tensor '(2 3) ...)`, `(tensor '() 3.5)` for a scalar |
+| `tensor?` | 1 | Predicate |
+| `tensor-shape` | 1 | Dimension sizes |
+| `tensor-axes` | 1 | Axis names |
+| `tensor->list` | 1 | Flat list of the values, row-major |
+| `tensor-at` | 2 | `tensor-at T '(0 1)` |
+| `tensor-set!` | 3 | Write one element in place |
+| `tensor-add` / `tensor-sub` / `tensor-mul` | 2 | Pointwise. A number or a rank-0 tensor broadcasts |
+| `tensor-join` | 2 | Product of elements that agree on shared public axes. Shared axes are kept once. No shared axis means the outer product |
+| `tensor-project` | 2 | Sum out the named axes: `tensor-project T 'i` or `tensor-project T '(i j)` |
+| `tensor-max` | 2 | Project by maximum (`max=` in the paper) |
+| `tensor-mean` | 2 | Project by mean (`avg=` in the paper) |
+| `tensor-einsum` | -1 | `(tensor-einsum "ij,jk->ik" A B)`. Two tensors. Indices missing on the right of `->` are summed |
+| `tensor-step` | 1 | Heaviside: 1 when `x > 0`, else 0 |
+| `tensor-relu` | 1 | `max(x, 0)` |
+| `tensor-sig` | 1 | Logistic sigmoid |
+| `tensor-exp` | 1 | Elementwise exponential |
+| `tensor-softmax` | 2 | Softmax along a named axis: `tensor-softmax T 'p` |
+| `tensor-lnorm` | 2 | Layer norm along a named axis: `(x - mean) / sqrt(var + 1e-5)` |
+
+```clojure
+define W (tensor 'i 0.2 1.9 -0.7 3)
+define X (tensor 'i 0 1 1 0)
+tensor->list tensor-step tensor-project tensor-join W X 'i    ;; (1.0)
+```
+
+`tensor-einsum` of `"i,i->"` on those two vectors is the dot product without
+the step. A Boolean rule is the same shape of program: see
+`examples/tensor-logic.arli`.
+
+What this layer does not include: a store of equations that forward-chains or
+back-chains by itself, automatic differentiation of an arli program, and a
+sparse relation type. A relation is a dense 0/1 tensor.
+
 ## Result Type (Ok / Err)
 
 The `Ok` and `Err` constructors create tagged values for error handling without exceptions:
